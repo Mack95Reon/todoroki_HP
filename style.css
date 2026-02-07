@@ -1,0 +1,362 @@
+/* ========================================
+   基本設定
+======================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    background: #0a0a0a;
+    color: #ffffff;
+    overflow-x: hidden;
+    cursor: none;
+}
+
+/* ========================================
+   カスタムカーソル
+======================================== */
+.cursor {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transition: all 0.1s ease;
+    mix-blend-mode: difference;
+}
+
+.cursor-follower {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transition: all 0.3s ease;
+    background: radial-gradient(circle, rgba(255,107,107,0.3), rgba(78,205,196,0.3));
+}
+
+/* ========================================
+   グラデーション背景
+======================================== */
+.gradient-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.gradient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.3;
+    transition: all 0.3s ease;
+}
+
+.orb-1 {
+    width: 500px;
+    height: 500px;
+    background: linear-gradient(45deg, #ff6b6b, #ee5a6f);
+    top: -200px;
+    left: -200px;
+}
+
+.orb-2 {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(45deg, #4ecdc4, #44a08d);
+    bottom: -150px;
+    right: -150px;
+}
+
+.orb-3 {
+    width: 350px;
+    height: 350px;
+    background: linear-gradient(45deg, #f7b731, #f39c12);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* ========================================
+   ヘッダー
+======================================== */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 30px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    background: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+nav ul {
+    display: flex;
+    gap: 40px;
+    list-style: none;
+}
+
+nav a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 14px;
+    letter-spacing: 1px;
+    transition: opacity 0.3s;
+}
+
+nav a:hover {
+    opacity: 0.6;
+}
+
+/* ========================================
+   メインコンテンツ
+======================================== */
+.container {
+    position: relative;
+    z-index: 1;
+}
+
+section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 60px;
+}
+
+/* ========================================
+   ヒーローセクション
+======================================== */
+.hero {
+    flex-direction: column;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: 72px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    line-height: 1.2;
+    background: linear-gradient(45deg, #fff, #4ecdc4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero p {
+    font-size: 20px;
+    margin-bottom: 40px;
+    opacity: 0.8;
+    letter-spacing: 2px;
+}
+
+.cta-button {
+    display: inline-block;
+    padding: 18px 50px;
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+}
+
+/* ========================================
+   サービスセクション
+======================================== */
+.services {
+    flex-direction: column;
+}
+
+.section-title {
+    font-size: 48px;
+    margin-bottom: 60px;
+    text-align: center;
+}
+
+.service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 40px;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.service-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 40px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.service-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(78, 205, 196, 0.2);
+}
+
+.service-card h3 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #4ecdc4;
+}
+
+.service-card p {
+    line-height: 1.8;
+    opacity: 0.8;
+}
+
+/* ========================================
+   特徴セクション
+======================================== */
+.features {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.feature-content {
+    max-width: 1200px;
+    width: 100%;
+}
+
+.feature-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 80px;
+    align-items: stretch; /* ★ここ */
+}
+
+.feature-image {
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+}
+
+.feature-item:nth-of-type(even) {
+    direction: rtl;
+}
+
+.feature-item:nth-of-type(even) > * {
+    direction: ltr;
+}
+
+.feature-text h3 {
+    font-size: 36px;
+    margin-bottom: 20px;
+    background: linear-gradient(45deg, #ff6b6b, #f7b731);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.feature-text p {
+    line-height: 1.8;
+    opacity: 0.8;
+    font-size: 16px;
+}
+
+.feature-image video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ========================================
+   お問い合わせセクション
+======================================== */
+.contact {
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.contact-content {
+    text-align: center;
+    max-width: 600px;
+}
+
+.contact h2 {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.contact p {
+    margin-bottom: 40px;
+    opacity: 0.8;
+    line-height: 1.8;
+}
+
+/* ========================================
+   フッター
+======================================== */
+footer {
+    position: relative;
+    z-index: 1;
+    padding: 40px 60px;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+footer p {
+    opacity: 0.6;
+    font-size: 14px;
+}
+
+/* ========================================
+   レスポンシブデザイン
+======================================== */
+@media (max-width: 768px) {
+    .hero h1 {
+        font-size: 42px;
+    }
+
+    .service-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .feature-item {
+        grid-template-columns: 1fr;
+    }
+
+    header {
+        padding: 20px 30px;
+    }
+
+    section {
+        padding: 80px 30px;
+    }
+
+    nav ul {
+        gap: 20px;
+    }
+
+    nav a {
+        font-size: 12px;
+    }
+}

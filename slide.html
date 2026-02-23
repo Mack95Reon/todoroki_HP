@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Amazon流の会議 — 意思決定の設計思想</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/white.min.css" />
+  <style>
+    /* ─── カラーパレット ─── */
+    :root {
+      --orange:      #F5600A;
+      --orange-light:#FF8C42;
+      --orange-pale: #FFF0E6;
+      --orange-mid:  #FFDCC4;
+      --white:       #FFFFFF;
+      --gray-dark:   #2D2D2D;
+      --gray-mid:    #555555;
+      --gray-light:  #F5F5F5;
+    }
+
+    /* ─── 全体リセット ─── */
+    .reveal { font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; }
+    .reveal .slides section { padding: 40px 60px; box-sizing: border-box; }
+
+    /* ─── スライド背景 ─── */
+    .reveal .slides section.white-bg  { background: var(--white); }
+    .reveal .slides section.orange-bg { background: var(--orange); }
+    .reveal .slides section.pale-bg   { background: var(--orange-pale); }
+
+    /* ─── タイポグラフィ ─── */
+    .reveal h1,
+    .reveal h2,
+    .reveal h3 { text-transform: none; letter-spacing: 0; }
+
+    .slide-label {
+      display: inline-block;
+      background: var(--orange);
+      color: var(--white);
+      font-size: 0.55em;
+      font-weight: 700;
+      letter-spacing: .08em;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 18px;
+      vertical-align: middle;
+    }
+
+    /* ─── タイトルスライド ─── */
+    .title-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; }
+    .title-main {
+      font-size: 2.6em;
+      font-weight: 900;
+      color: var(--white);
+      line-height: 1.25;
+      text-align: center;
+    }
+    .title-sub {
+      font-size: 1em;
+      color: rgba(255,255,255,.8);
+      margin-top: 18px;
+      text-align: center;
+      letter-spacing: .06em;
+    }
+    .title-rule {
+      width: 60px; height: 4px;
+      background: rgba(255,255,255,.5);
+      border-radius: 2px;
+      margin: 22px auto;
+    }
+
+    /* ─── 大見出し ─── */
+    .section-heading {
+      font-size: 2.2em;
+      font-weight: 900;
+      color: var(--gray-dark);
+      line-height: 1.3;
+    }
+    .section-heading span { color: var(--orange); }
+
+    /* ─── カード ─── */
+    .card-grid { display:flex; gap:20px; flex-wrap:wrap; margin-top:24px; }
+    .card {
+      flex: 1 1 200px;
+      background: var(--white);
+      border-radius: 16px;
+      padding: 24px 22px;
+      box-shadow: 0 4px 18px rgba(245,96,10,.12);
+    }
+    .card-num {
+      font-size: 1.8em;
+      font-weight: 900;
+      color: var(--orange);
+      line-height: 1;
+    }
+    .card-text { font-size: 0.85em; color: var(--gray-mid); margin-top: 8px; line-height: 1.5; }
+
+    /* ─── ポイントリスト ─── */
+    .point-list { list-style: none; padding: 0; margin: 20px 0 0; }
+    .point-list li {
+      display: flex; align-items: flex-start; gap: 14px;
+      font-size: 0.92em; color: var(--gray-dark);
+      padding: 14px 0; border-bottom: 1px solid #EEE;
+      line-height: 1.55;
+    }
+    .point-list li:last-child { border-bottom: none; }
+    .point-list li .icon {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--orange); color: #fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size: 0.85em; font-weight: 700; flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ─── サイクル図 ─── */
+    .cycle {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: 0; margin-top: 30px;
+    }
+    .cycle-item {
+      background: var(--orange);
+      color: #fff;
+      border-radius: 12px;
+      padding: 18px 22px;
+      font-size: 0.82em;
+      font-weight: 700;
+      text-align: center;
+      min-width: 120px;
+      line-height: 1.4;
+    }
+    .cycle-arrow {
+      font-size: 1.4em; color: var(--orange);
+      padding: 0 8px; font-weight: 900;
+    }
+
+    /* ─── 吹き出し会話 ─── */
+    .chat { display:flex; flex-direction:column; gap:14px; margin-top:20px; }
+    .bubble {
+      max-width: 78%;
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-size: 0.82em;
+      line-height: 1.6;
+    }
+    .bubble.left  { background: var(--gray-light); color: var(--gray-dark); align-self:flex-start; border-bottom-left-radius:4px; }
+    .bubble.right { background: var(--orange); color: #fff; align-self:flex-end; border-bottom-right-radius:4px; }
+    .bubble-label { font-size: 0.72em; font-weight: 700; margin-bottom:5px; opacity:.7; }
+    .answer-box {
+      margin-top: 28px;
+      background: var(--orange);
+      color: #fff;
+      border-radius: 14px;
+      padding: 18px 28px;
+      font-size: 1em;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: .04em;
+    }
+
+    /* ─── クイズ表示 ─── */
+    .quiz-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px 0;
+      margin-top: 28px;
+      font-size: 1em;
+    }
+    .quiz-num {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 18px 10px;
+      text-align: center;
+      font-size: 1.25em;
+      font-weight: 900;
+      color: var(--orange);
+      box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    }
+    .quiz-divider {
+      display:flex; align-items:center; justify-content:center;
+      color: var(--orange); font-size: 1.4em; font-weight: 900;
+      padding: 0 14px;
+    }
+    .quiz-question {
+      font-size: 1.25em; font-weight: 900;
+      color: var(--gray-dark); text-align:center;
+      margin-bottom: 10px;
+    }
+
+    /* ─── 表 ─── */
+    .data-table { width:100%; border-collapse: collapse; margin-top: 20px; font-size: 0.78em; }
+    .data-table th {
+      background: var(--orange); color: #fff;
+      padding: 12px 10px; text-align: center;
+      font-weight: 700;
+    }
+    .data-table td {
+      padding: 12px 10px; text-align: center;
+      border-bottom: 1px solid #EEE;
+      color: var(--gray-dark);
+    }
+    .data-table tr:nth-child(even) td { background: var(--orange-pale); }
+    .data-table td.highlight { font-weight: 900; color: var(--orange); }
+
+    /* ─── 3Wカード ─── */
+    .three-w { display:flex; gap:18px; margin-top:24px; }
+    .w-card {
+      flex:1; border-radius: 16px; padding: 28px 20px;
+      text-align: center;
+    }
+    .w-card.what { background: var(--orange); color: #fff; }
+    .w-card.who  { background: var(--orange-light); color: #fff; }
+    .w-card.when { background: var(--orange-mid); color: var(--gray-dark); }
+    .w-letter { font-size: 2.2em; font-weight: 900; }
+    .w-label  { font-size: 0.75em; margin-top: 6px; opacity: .85; font-weight: 700; }
+    .w-desc   { font-size: 0.72em; margin-top: 10px; line-height: 1.5; }
+
+    /* ─── フロー図（まとめ）─── */
+    .flow { display:flex; flex-direction:column; align-items:center; gap:0; margin-top:20px; }
+    .flow-item {
+      background: var(--orange);
+      color: #fff;
+      border-radius: 10px;
+      padding: 12px 40px;
+      font-size: 0.88em;
+      font-weight: 700;
+      min-width: 240px;
+      text-align: center;
+    }
+    .flow-arrow { font-size:1.4em; color: var(--orange); line-height:1.4; }
+
+    /* ─── ステップバッジ ─── */
+    .step-badge {
+      display:inline-block;
+      background: var(--orange);
+      color: #fff;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      line-height: 32px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 0.9em;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    /* ─── ハイライトボックス ─── */
+    .highlight-box {
+      background: var(--orange);
+      color: #fff;
+      border-radius: 14px;
+      padding: 20px 28px;
+      font-size: 1em;
+      font-weight: 800;
+      text-align: center;
+      margin-top: 24px;
+      line-height: 1.5;
+    }
+    .sub-highlight-box {
+      background: var(--orange-pale);
+      border-left: 5px solid var(--orange);
+      border-radius: 0 12px 12px 0;
+      padding: 16px 20px;
+      font-size: 0.82em;
+      color: var(--gray-dark);
+      margin-top: 14px;
+      line-height: 1.6;
+    }
+
+    /* ─── スタンスカード ─── */
+    .stance-grid { display:flex; gap:16px; margin-top: 24px; }
+    .stance-card {
+      flex:1; border-radius:14px; padding: 22px 18px; text-align:center;
+    }
+    .stance-card.do   { background: var(--orange); color:#fff; }
+    .stance-card.dont { background: #f0f0f0; color: var(--gray-mid); }
+    .stance-icon { font-size: 2em; margin-bottom: 8px; }
+    .stance-title { font-size: 0.82em; font-weight: 900; }
+    .stance-desc  { font-size: 0.72em; margin-top: 8px; line-height: 1.5; }
+
+    /* ─── Working Backwards ─── */
+    .wb-flow {
+      display:flex; align-items:center; justify-content:center;
+      gap: 10px; margin-top: 28px; flex-wrap:wrap;
+    }
+    .wb-box {
+      border-radius: 12px;
+      padding: 16px 18px;
+      font-size: 0.78em;
+      font-weight: 700;
+      text-align:center;
+      min-width: 110px;
+      line-height: 1.4;
+    }
+    .wb-box.end   { background: var(--orange); color:#fff; }
+    .wb-box.mid   { background: var(--orange-mid); color: var(--gray-dark); }
+    .wb-box.start { background: var(--gray-light); color: var(--gray-dark); }
+    .wb-arrow { font-size: 1.3em; color: var(--orange); font-weight:900; }
+
+    /* ─── progress バー非表示 ─── */
+    .reveal .progress { background: rgba(245,96,10,.15); }
+    .reveal .progress span { background: var(--orange); }
+
+    /* ─── controls ─── */
+    .reveal .controls { color: var(--orange); }
+  </style>
+</head>
+<body>
+<div class="reveal">
+  <div class="slides">
+
+    <!-- ① タイトル -->
+    <section class="orange-bg">
+      <div class="title-wrap">
+        <div class="title-main">Amazon流の会議<br>意思決定の設計思想</div>
+        <div class="title-rule"></div>
+        <div class="title-sub">会議の質が、会社の利益構造を決める</div>
+      </div>
+    </section>
+
+    <!-- ② 会議の本質 -->
+    <section class="pale-bg">
+      <span class="slide-label">会議の本質</span>
+      <div class="section-heading">会議 ＝ <span>「仕組み」</span>を作る場</div>
+      <ul class="point-list">
+        <li>
+          <span class="icon">✗</span>
+          <span>雑談・報告だけの場ではない</span>
+        </li>
+        <li>
+          <span class="icon">○</span>
+          <span><strong>意思決定を通じて仕組みを作る</strong>ことが目的</span>
+        </li>
+        <li>
+          <span class="icon">★</span>
+          <span>リーダーシップを発揮する最前線の場</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ③ Amazonのサイクル -->
+    <section class="white-bg">
+      <span class="slide-label">Amazonのサイクル</span>
+      <div class="section-heading">仕組みを<span>スケール</span>させる4ステップ</div>
+      <div class="cycle">
+        <div class="cycle-item">① 単純な仕組みを<br>いくつも作る</div>
+        <div class="cycle-arrow">→</div>
+        <div class="cycle-item">② スケーラビリティ<br>を構築する</div>
+        <div class="cycle-arrow">→</div>
+        <div class="cycle-item">③ 仕組みを運用する<br>人財を育てる</div>
+        <div class="cycle-arrow">→</div>
+        <div class="cycle-item">④ リーダーシップある<br>人財が必要</div>
+      </div>
+      <div class="highlight-box" style="margin-top:28px; font-size:0.85em;">
+        このサイクルを回し続けることが<br>Amazonの成長エンジン
+      </div>
+    </section>
+
+    <!-- ④ 顧客中心主義 -->
+    <section class="pale-bg">
+      <span class="slide-label">顧客中心主義</span>
+      <div class="section-heading">すべての中心は<br><span>「お客様にとってどうか？」</span></div>
+      <ul class="point-list">
+        <li>
+          <span class="icon">👁</span>
+          <span>競合ではなく、<strong>顧客を見る</strong></span>
+        </li>
+        <li>
+          <span class="icon">✋</span>
+          <span>反対すべきなら、はっきり <strong>「No」</strong> と言う</span>
+        </li>
+        <li>
+          <span class="icon">⚡</span>
+          <span>上司への<strong>忖度なし</strong>。妥協・なれ合いは禁止</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ⑤ 感覚で判断しない -->
+    <section class="white-bg">
+      <span class="slide-label">データ思考</span>
+      <div class="section-heading">感覚で判断しない</div>
+      <div class="chat">
+        <div class="bubble left">
+          <div class="bubble-label">Aさん</div>
+          「この部屋の天井って何メートルくらいある？」
+        </div>
+        <div class="bubble right">
+          <div class="bubble-label">Bさん</div>
+          「5メートルじゃない？」
+        </div>
+        <div class="bubble left">
+          <div class="bubble-label">Cさん</div>
+          「いや、3メートルでしょ」
+        </div>
+        <div class="bubble right">
+          <div class="bubble-label">Aさん</div>
+          「じゃあ、間を取って4メートルか！」
+        </div>
+      </div>
+      <div class="answer-box">→ 感覚で言うな。メジャーを持ってこい。</div>
+    </section>
+
+    <!-- ⑥ クイズ（数字だけ） -->
+    <section class="orange-bg">
+      <div class="title-wrap">
+        <div class="title-main" style="font-size:1.8em;">この数字は何でしょう？</div>
+        <div class="title-rule"></div>
+        <div style="display:grid; grid-template-columns:1fr 40px 1fr 40px 1fr; gap:12px; margin-top:30px; width:100%;">
+          <div style="background:rgba(255,255,255,.2); border-radius:14px; padding:20px; text-align:center; color:#fff;">
+            <div style="font-size:1.4em; font-weight:900;">417,600</div>
+            <div style="font-size:0.6em; opacity:.7; margin-top:4px;">時間</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3em;">｜</div>
+          <div style="background:rgba(255,255,255,.2); border-radius:14px; padding:20px; text-align:center; color:#fff;">
+            <div style="font-size:1.4em; font-weight:900;">91,000</div>
+            <div style="font-size:0.6em; opacity:.7; margin-top:4px;">時間</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3em;">｜</div>
+          <div style="background:rgba(255,255,255,.2); border-radius:14px; padding:20px; text-align:center; color:#fff;">
+            <div style="font-size:1.4em; font-weight:900;">2億830万</div>
+            <div style="font-size:0.6em; opacity:.7; margin-top:4px;">円</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 40px 1fr 40px 1fr; gap:12px; margin-top:14px; width:100%;">
+          <div style="background:rgba(255,255,255,.12); border-radius:14px; padding:20px; text-align:center; color:#fff;">
+            <div style="font-size:1.4em; font-weight:900;">2,351,000</div>
+            <div style="font-size:0.6em; opacity:.7; margin-top:4px;">時間</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3em;">｜</div>
+          <div style="background:rgba(255,255,255,.12); border-radius:14px; padding:20px; text-align:center; color:#fff;">
+            <div style="font-size:1.4em; font-weight:900;">669,100</div>
+            <div style="font-size:0.6em; opacity:.7; margin-top:4px;">時間</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3em;">｜</div>
+          <div style="background:rgba(255,255,255,.12); border-radius:14px; padding:20px; text-align:center; color:#fff;">
+            <div style="font-size:1.4em; font-weight:900;">15億2,740万</div>
+            <div style="font-size:0.6em; opacity:.7; margin-top:4px;">円</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑦ クイズ答え（表） -->
+    <section class="white-bg">
+      <span class="slide-label">答え</span>
+      <div class="section-heading">無駄な会議は<span>利益を捨てている</span></div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>企業規模</th>
+            <th>会社全体の<br>年間会議時間</th>
+            <th>無駄だと思われる<br>年間会議時間</th>
+            <th>ムダ会議の<br>年間総人件費</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1,500名</strong></td>
+            <td>417,600 時間</td>
+            <td class="highlight">91,000 時間</td>
+            <td class="highlight">2億830万円</td>
+          </tr>
+          <tr>
+            <td><strong>10,000名</strong></td>
+            <td>2,351,000 時間</td>
+            <td class="highlight">669,100 時間</td>
+            <td class="highlight">15億2,740万円</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="highlight-box" style="font-size:0.82em;">
+        無駄な時間 ＝ 利益を捨てている<br>
+        <span style="font-size:0.8em; font-weight:500;">情報共有だけの会議は不要。資料で済ませる。</span>
+      </div>
+    </section>
+
+    <!-- ⑧ 会議の目的分類 -->
+    <section class="pale-bg">
+      <span class="slide-label">会議設計</span>
+      <div class="section-heading">会議の目的を<span>明確に分類</span>する</div>
+      <div class="card-grid" style="margin-top:24px;">
+        <div class="card">
+          <div class="card-num">01</div>
+          <div class="card-text"><strong>意思決定</strong><br>何かを決める会議</div>
+        </div>
+        <div class="card">
+          <div class="card-num">02</div>
+          <div class="card-text"><strong>アイデア出し</strong><br>ブレスト・発散の場</div>
+        </div>
+        <div class="card">
+          <div class="card-num">03</div>
+          <div class="card-text"><strong>進捗管理</strong><br>定例・チェックイン</div>
+        </div>
+        <div class="card">
+          <div class="card-num" style="color:#aaa;">04</div>
+          <div class="card-text" style="color:#aaa;"><strong>情報伝達</strong><br>※ 極力削減する</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑨ ゴール明確化 3W -->
+    <section class="white-bg">
+      <span class="slide-label">意思決定会議の設計 ①</span>
+      <div class="section-heading">ゴールを明確化する<span>「3W」</span></div>
+      <div class="three-w">
+        <div class="w-card what">
+          <div class="w-letter">What</div>
+          <div class="w-label">何を決めるのか</div>
+          <div class="w-desc">会議の目的を<br>一言で定義する</div>
+        </div>
+        <div class="w-card who">
+          <div class="w-letter">Who</div>
+          <div class="w-label">誰が責任を持つか</div>
+          <div class="w-desc">オーナーを<br>明確にする</div>
+        </div>
+        <div class="w-card when">
+          <div class="w-letter">When</div>
+          <div class="w-label">いつまでに実行か</div>
+          <div class="w-desc">NA（Next Action）<br>期限を必ず設定</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑩ 参加者設計 -->
+    <section class="pale-bg">
+      <span class="slide-label">意思決定会議の設計 ②</span>
+      <div class="section-heading"><span>最小人数</span>で決める</div>
+      <ul class="point-list">
+        <li>
+          <span class="icon">1</span>
+          <span>決定権を持つ<strong>最小人数</strong>だけを招集（案件PMひとりでよい）</span>
+        </li>
+        <li>
+          <span class="icon">2</span>
+          <span>同じ部門から複数人は<strong>不要</strong>。部門代表として参加する</span>
+        </li>
+        <li>
+          <span class="icon">3</span>
+          <span>参加できない場合は<strong>権限移譲</strong>が成長機会<br>
+            <span style="font-size:0.85em; color:var(--gray-mid);">部長が出られないなら課長に権限を委譲する</span>
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ⑪ オーナーの役割 -->
+    <section class="white-bg">
+      <span class="slide-label">意思決定会議の設計 ③</span>
+      <div class="section-heading">会議<span>オーナー</span>の役割</div>
+      <ul class="point-list">
+        <li><span class="icon">A</span><span>目的を明確化する</span></li>
+        <li><span class="icon">B</span><span>日程・参加者を設定する</span></li>
+        <li><span class="icon">C</span><span>ゴールを全員と共有する</span></li>
+        <li><span class="icon">D</span><span>議論を活性化する（ファシリテーター役）</span></li>
+      </ul>
+    </section>
+
+    <!-- ⑫ 成功条件・撤退条件 -->
+    <section class="pale-bg">
+      <span class="slide-label">意思決定会議の設計 ④</span>
+      <div class="section-heading">最重要：<span>出口条件</span>を定義する</div>
+      <div class="card-grid" style="margin-top:24px;">
+        <div class="card" style="border-top: 4px solid var(--orange);">
+          <div style="font-size:1.1em; font-weight:900; color:var(--orange);">成功条件</div>
+          <div style="font-size:0.75em; font-weight:700; color:var(--gray-mid); margin-top:4px;">Measure of Success</div>
+          <div class="card-text" style="margin-top:12px;">
+            何をもって成功とするか、<br>事前に数値や基準で定義する
+          </div>
+        </div>
+        <div class="card" style="border-top: 4px solid #999;">
+          <div style="font-size:1.1em; font-weight:900; color:#666;">撤退条件</div>
+          <div style="font-size:0.75em; font-weight:700; color:var(--gray-mid); margin-top:4px;">Exit Criteria</div>
+          <div class="card-text" style="margin-top:12px;">
+            どこまで行ったらやめるか、<br>損切りラインを先に決める
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box" style="font-size:0.8em; margin-top:20px;">
+        ゴールへの道筋だけでなく、撤退ラインも設計する
+      </div>
+    </section>
+
+    <!-- ⑬ 参加者のスタンス -->
+    <section class="white-bg">
+      <span class="slide-label">参加者のスタンス</span>
+      <div class="section-heading">聞くだけは<span>NG</span></div>
+      <div class="stance-grid">
+        <div class="stance-card do">
+          <div class="stance-icon">✔</div>
+          <div class="stance-title">積極的に発言する</div>
+          <div class="stance-desc">意見を持って参加する<br>発言することが参加の義務</div>
+        </div>
+        <div class="stance-card do">
+          <div class="stance-icon">✔</div>
+          <div class="stance-title">決まったら100%コミット</div>
+          <div class="stance-desc">会議後にグチグチ言わない<br>全員で決めたことに従う</div>
+        </div>
+        <div class="stance-card dont">
+          <div class="stance-icon">✗</div>
+          <div class="stance-title">聞くだけ参加</div>
+          <div class="stance-desc">議事録係は不要<br>それは会議ではない</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑭ ワーキングバックワーズ -->
+    <section class="pale-bg">
+      <span class="slide-label">Working Backwards</span>
+      <div class="section-heading">常に<span>逆算</span>で考える</div>
+      <div class="wb-flow">
+        <div class="wb-box end">最終成果<br>（顧客価値）</div>
+        <div class="wb-arrow">←</div>
+        <div class="wb-box mid">必要な施策<br>を設計</div>
+        <div class="wb-arrow">←</div>
+        <div class="wb-box start">現状の<br>延長線で考えない</div>
+      </div>
+      <div class="sub-highlight-box">
+        <strong>例：</strong>先方が「受注率（質）」を求めているなら...<br>
+        ❌「リストが少ないからパパッと1000件追加しよう」<br>
+        ✅「どの業界・レイヤーが受注率を高めるか」を逆算 → アップセルにも繋がる
+      </div>
+    </section>
+
+    <!-- ⑮ まとめ -->
+    <section class="orange-bg">
+      <div class="title-wrap">
+        <div class="title-main" style="font-size:1.5em; margin-bottom:20px;">Amazonの会議設計</div>
+        <div class="flow">
+          <div class="flow-item">顧客中心</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-item">明確な目的（3W）</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-item">最小人数で意思決定</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-item">成功条件と撤退条件の設定</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-item">仕組み化 → スケール</div>
+        </div>
+        <div style="color:rgba(255,255,255,.85); font-size:0.78em; margin-top:22px; text-align:center; line-height:1.7;">
+          会議の質は、会社の利益構造そのものに直結している
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    controls: true,
+    progress: true,
+    center: true,
+    width: 1100,
+    height: 650,
+    margin: 0.04,
+  });
+</script>
+</body>
+</html>

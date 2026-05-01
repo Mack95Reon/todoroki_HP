@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍺 飲みゲーム - 高山・ダイサブ・トドロキ・森ちゃん</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #0a0a1a;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ========== 背景アニメーション ========== */
+        .bg-bubbles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -50px;
+            border-radius: 50%;
+            opacity: 0.15;
+            animation: float-up linear infinite;
+        }
+
+        @keyframes float-up {
+            0% { transform: translateY(0) scale(1); opacity: 0.15; }
+            100% { transform: translateY(-110vh) scale(1.3); opacity: 0; }
+        }
+
+        /* ========== ヘッダー ========== */
+        header {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 30px 20px 10px;
+            background: linear-gradient(180deg, rgba(255,180,0,0.15) 0%, transparent 100%);
+        }
+
+        header h1 {
+            font-size: clamp(1.8rem, 5vw, 3rem);
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #FFD700, #FF8C00, #FF4500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            filter: drop-shadow(0 0 20px rgba(255,180,0,0.6));
+        }
+
+        header p {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+            margin-top: 6px;
+            letter-spacing: 0.1em;
+        }
+
+        /* ========== タブナビゲーション ========== */
+        .tab-nav {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.7);
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-btn:hover {
+            border-color: #FFD700;
+            color: #FFD700;
+            transform: translateY(-2px);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            border-color: transparent;
+            color: #000;
+            box-shadow: 0 4px 20px rgba(255,180,0,0.5);
+            transform: translateY(-2px);
+        }
+
+        /* ========== メインコンテンツ ========== */
+        .main {
+            position: relative;
+            z-index: 10;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 10px 20px 60px;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========== キャラクターカード ========== */
+        .characters {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        @media (min-width: 600px) {
+            .characters {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .char-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .char-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .char-card.takayama { --color: #FF6B6B; }
+        .char-card.daisabu  { --color: #4ECDC4; }
+        .char-card.todoroki { --color: #FFE66D; }
+        .char-card.morichan { --color: #A8E6CF; }
+
+        .char-card::before {
+            background: radial-gradient(circle at center, var(--color), transparent 70%);
+        }
+
+        .char-card:hover, .char-card.selected {
+            border-color: var(--color);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 20px var(--color);
+        }
+
+        .char-card:hover::before, .char-card.selected::before {
+            opacity: 0.15;
+        }
+
+        .char-emoji {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
+        }
+
+        .char-name {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--color);
+        }
+
+        .drink-count {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .drink-badge {
+            display: inline-block;
+            background: var(--color);
+            color: #000;
+            font-weight: 900;
+            font-size: 1rem;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            border-radius: 50%;
+            margin-top: 6px;
+        }
+
+        /* ========== ルーレット ========== */
+        .roulette-section {
+            text-align: center;
+        }
+
+        .roulette-wheel-wrap {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 20px auto;
+        }
+
+        .roulette-wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            transition: transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+            box-shadow: 0 0 40px rgba(255,180,0,0.4), inset 0 0 30px rgba(0,0,0,0.3);
+            border: 4px solid rgba(255,180,0,0.6);
+        }
+
+        .roulette-wheel canvas {
+            border-radius: 50%;
+        }
+
+        .roulette-pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2rem;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+        }
+
+        .roulette-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #FFD700, #FF8C00);
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 0 15px rgba(255,180,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .spin-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 16px 48px;
+            font-size: 1.3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            color: #000;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(255,180,0,0.5);
+            letter-spacing: 0.1em;
+        }
+
+        .spin-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px rgba(255,180,0,0.7);
+        }
+
+        .spin-btn:active {
+            transform: scale(0.98);
+        }
+
+        .spin-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-display {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-card {
+            background: rgba(255,255,255,0.08);
+            border: 2px solid rgba(255,180,0,0.5);
+            border-radius: 20px;
+            padding: 20px 30px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ========== お題カード ========== */
+        .challenge-section {
+            text-align: center;
+        }
+
+        .card-area {
+            perspective: 1000px;
+            margin: 20px auto;
+            width: 320px;
+            height: 200px;
+        }
+
+        .challenge-card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .challenge-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backface-visibility: hidden;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #1a1a3e, #2d1b69);
+            border: 2px solid rgba(255,180,0,0.4);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            font-size: 3rem;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .card-front span {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 0.2em;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #1a3a1a, #1e4d1e);
+            border: 2px solid rgba(100,255,100,0.4);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            transform: rotateY(180deg);
+            padding: 20px;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .challenge-type {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            color: rgba(100,255,100,0.7);
+            text-transform: uppercase;
+        }
+
+        .challenge-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        .challenge-penalty {
+            font-size: 0.85rem;
+            color: #FF6B6B;
+            font-weight: 600;
+        }
+
+        .draw-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 14px 40px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #4CAF50, #2e7d32);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(76,175,80,0.4);
+        }
+
+        .draw-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px rgba(76,175,80,0.6);
+        }
+
+        /* ========== じゃんけん ========== */
+        .janken-section {
+            text-align: center;
+        }
+
+        .janken-player-select {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .player-select-btn {
+            padding: 10px 20px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.7);
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .player-select-btn.selected {
+            border-color: var(--color);
+            background: rgba(255,255,255,0.1);
+            color: var(--color);
+        }
+
+        .janken-hands {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .hand-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .hand-btn span.label {
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .hand-btn:hover {
+            border-color: #FFD700;
+            transform: scale(1.1);
+            box-shadow: 0 4px 20px rgba(255,180,0,0.3);
+        }
+
+        .hand-btn.chosen {
+            border-color: #FFD700;
+            background: rgba(255,180,0,0.1);
+            box-shadow: 0 0 20px rgba(255,180,0,0.4);
+        }
+
+        .janken-result {
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .janken-result-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 20px 30px;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
+        }
+
+        .janken-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+
+        /* ========== カウンター ========== */
+        .counter-section {}
+
+        .counter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        @media (min-width: 600px) {
+            .counter-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .counter-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .counter-card.takayama { border-color: rgba(255,107,107,0.4); }
+        .counter-card.daisabu  { border-color: rgba(78,205,196,0.4); }
+        .counter-card.todoroki { border-color: rgba(255,230,109,0.4); }
+        .counter-card.morichan { border-color: rgba(168,230,207,0.4); }
+
+        .counter-emoji { font-size: 2.5rem; }
+        .counter-name {
+            font-weight: 900;
+            font-size: 1rem;
+            margin: 8px 0;
+        }
+
+        .counter-name.takayama { color: #FF6B6B; }
+        .counter-name.daisabu  { color: #4ECDC4; }
+        .counter-name.todoroki { color: #FFE66D; }
+        .counter-name.morichan { color: #A8E6CF; }
+
+        .counter-num {
+            font-size: 2.5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin: 10px 0;
+        }
+
+        .counter-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .cnt-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cnt-btn.plus {
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            color: #000;
+        }
+
+        .cnt-btn.minus {
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+        }
+
+        .cnt-btn:hover { transform: scale(1.15); }
+
+        .reset-all-btn {
+            display: block;
+            margin: 24px auto 0;
+            padding: 12px 32px;
+            border: 2px solid rgba(255,100,100,0.4);
+            background: transparent;
+            color: rgba(255,100,100,0.7);
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .reset-all-btn:hover {
+            background: rgba(255,100,100,0.1);
+            color: #FF6B6B;
+            border-color: #FF6B6B;
+        }
+
+        /* ========== セクションタイトル ========== */
+        .section-title {
+            text-align: center;
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin: 10px 0 20px;
+        }
+
+        /* ========== ルール ========== */
+        .rules-section {}
+
+        .rules-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .rule-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .rule-icon {
+            font-size: 1.8rem;
+            flex-shrink: 0;
+        }
+
+        .rule-content h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #FFD700;
+            margin-bottom: 4px;
+        }
+
+        .rule-content p {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+        }
+
+        /* ========== お知らせバナー ========== */
+        .notice-banner {
+            background: rgba(255,180,0,0.1);
+            border: 1px solid rgba(255,180,0,0.3);
+            border-radius: 12px;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: rgba(255,180,0,0.8);
+            margin-bottom: 20px;
+        }
+
+        /* ========== 勝利エフェクト ========== */
+        .confetti-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            top: -20px;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            animation: confetti-fall linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* ========== フッター ========== */
+        .footer-notice {
+            text-align: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.75rem;
+            padding: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景バブル -->
+    <div class="bg-bubbles" id="bgBubbles"></div>
+
+    <!-- コンフェッティ -->
+    <div class="confetti-overlay" id="confettiOverlay"></div>
+
+    <header>
+        <h1>🍺 飲みゲーム 🍺</h1>
+        <p>高山 × ダイサブ × トドロキ × 森ちゃん</p>
+    </header>
+
+    <nav class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('roulette')">🎡 ルーレット</button>
+        <button class="tab-btn" onclick="switchTab('challenge')">🃏 お題カード</button>
+        <button class="tab-btn" onclick="switchTab('janken')">✊ じゃんけん</button>
+        <button class="tab-btn" onclick="switchTab('counter')">🍻 カウンター</button>
+        <button class="tab-btn" onclick="switchTab('rules')">📋 ルール</button>
+    </nav>
+
+    <main class="main">
+
+        <!-- ======== ルーレット ======== -->
+        <section class="tab-content active" id="tab-roulette">
+            <div class="notice-banner">🍺 選ばれた人が1杯飲む！</div>
+            <p class="section-title">🎡 ROULETTE</p>
+
+            <div class="roulette-section">
+                <div class="roulette-wheel-wrap">
+                    <div class="roulette-pointer">▼</div>
+                    <div class="roulette-wheel" id="rouletteWheel">
+                        <canvas id="rouletteCanvas" width="280" height="280"></canvas>
+                    </div>
+                    <div class="roulette-center">🎯</div>
+                </div>
+
+                <button class="spin-btn" id="spinBtn" onclick="spinRoulette()">🎰 まわす！</button>
+
+                <div class="result-display" id="rouletteResult"></div>
+            </div>
+        </section>
+
+        <!-- ======== お題カード ======== -->
+        <section class="tab-content" id="tab-challenge">
+            <div class="notice-banner">🃏 カードをめくってお題に挑戦！</div>
+            <p class="section-title">🃏 CHALLENGE CARD</p>
+
+            <div class="challenge-section">
+                <div class="card-area">
+                    <div class="challenge-card" id="challengeCard" onclick="flipCard()">
+                        <div class="card-face card-front">
+                            <span>🃏</span>
+                            <span>タップしてめくる</span>
+                        </div>
+                        <div class="card-face card-back" id="challengeCardBack">
+                            <span class="challenge-type">CHALLENGE</span>
+                            <span class="challenge-text" id="challengeText">?</span>
+                            <span class="challenge-penalty" id="challengePenalty">?</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="draw-btn" onclick="drawChallenge()">🎲 次のお題を引く</button>
+            </div>
+        </section>
+
+        <!-- ======== じゃんけん ======== -->
+        <section class="tab-content" id="tab-janken">
+            <div class="notice-banner">✊ 負けた人が飲む！あいこは全員飲む！</div>
+            <p class="section-title">✊ JANKEN</p>
+
+            <div class="janken-section">
+                <p style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin-bottom:12px;">対決プレイヤーを選ぶ (2〜4人)</p>
+
+                <div class="janken-player-select">
+                    <button class="player-select-btn takayama" style="--color:#FF6B6B" onclick="toggleJankenPlayer(this,'高山')" data-player="高山">高山</button>
+                    <button class="player-select-btn daisabu"  style="--color:#4ECDC4" onclick="toggleJankenPlayer(this,'ダイサブ')" data-player="ダイサブ">ダイサブ</button>
+                    <button class="player-select-btn todoroki" style="--color:#FFE66D" onclick="toggleJankenPlayer(this,'トドロキ')" data-player="トドロキ">トドロキ</button>
+                    <button class="player-select-btn morichan" style="--color:#A8E6CF" onclick="toggleJankenPlayer(this,'森ちゃん')" data-player="森ちゃん">森ちゃん</button>
+                </div>
+
+                <p style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin-bottom:10px;">手を選ぶ</p>
+
+                <div class="janken-hands">
+                    <button class="hand-btn" onclick="janken('グー')" data-hand="グー">
+                        ✊
+                        <span class="label">グー</span>
+                    </button>
+                    <button class="hand-btn" onclick="janken('チョキ')" data-hand="チョキ">
+                        ✌️
+                        <span class="label">チョキ</span>
+                    </button>
+                    <button class="hand-btn" onclick="janken('パー')" data-hand="パー">
+                        🖐️
+                        <span class="label">パー</span>
+                    </button>
+                </div>
+
+                <div class="janken-result" id="jankenResult"></div>
+            </div>
+        </section>
+
+        <!-- ======== カウンター ======== -->
+        <section class="tab-content" id="tab-counter">
+            <p class="section-title">🍻 DRINK COUNTER</p>
+            <div class="counter-grid">
+                <div class="counter-card takayama">
+                    <div class="counter-emoji">🎤</div>
+                    <div class="counter-name takayama">高山</div>
+                    <div class="counter-num" id="cnt-高山">0</div>
+                    <div class="counter-controls">
+                        <button class="cnt-btn minus" onclick="addDrink('高山', -1)">−</button>
+                        <button class="cnt-btn plus"  onclick="addDrink('高山',  1)">+</button>
+                    </div>
+                </div>
+                <div class="counter-card daisabu">
+                    <div class="counter-emoji">🕶️</div>
+                    <div class="counter-name daisabu">ダイサブ</div>
+                    <div class="counter-num" id="cnt-ダイサブ">0</div>
+                    <div class="counter-controls">
+                        <button class="cnt-btn minus" onclick="addDrink('ダイサブ', -1)">−</button>
+                        <button class="cnt-btn plus"  onclick="addDrink('ダイサブ',  1)">+</button>
+                    </div>
+                </div>
+                <div class="counter-card todoroki">
+                    <div class="counter-emoji">⚡</div>
+                    <div class="counter-name todoroki">トドロキ</div>
+                    <div class="counter-num" id="cnt-トドロキ">0</div>
+                    <div class="counter-controls">
+                        <button class="cnt-btn minus" onclick="addDrink('トドロキ', -1)">−</button>
+                        <button class="cnt-btn plus"  onclick="addDrink('トドロキ',  1)">+</button>
+                    </div>
+                </div>
+                <div class="counter-card morichan">
+                    <div class="counter-emoji">🌿</div>
+                    <div class="counter-name morichan">森ちゃん</div>
+                    <div class="counter-num" id="cnt-森ちゃん">0</div>
+                    <div class="counter-controls">
+                        <button class="cnt-btn minus" onclick="addDrink('森ちゃん', -1)">−</button>
+                        <button class="cnt-btn plus"  onclick="addDrink('森ちゃん',  1)">+</button>
+                    </div>
+                </div>
+            </div>
+            <button class="reset-all-btn" onclick="resetAll()">🔄 全員リセット</button>
+        </section>
+
+        <!-- ======== ルール ======== -->
+        <section class="tab-content" id="tab-rules">
+            <p class="section-title">📋 RULES</p>
+            <div class="rules-grid">
+                <div class="rule-card">
+                    <div class="rule-icon">🎡</div>
+                    <div class="rule-content">
+                        <h3>ルーレット</h3>
+                        <p>ボタンを押してルーレットを回す。止まったキャラクターの人が1杯飲む！</p>
+                    </div>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon">🃏</div>
+                    <div class="rule-content">
+                        <h3>お題カード</h3>
+                        <p>カードをタップしてお題を引く。お題に失敗したらペナルティを飲む！全員参加のお題は全員で楽しむ！</p>
+                    </div>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon">✊</div>
+                    <div class="rule-content">
+                        <h3>じゃんけん</h3>
+                        <p>2〜4人でじゃんけん対決！負けた人が飲む。あいこは全員飲む。全勝した人は罰ゲームを他の人に押しつけられる！</p>
+                    </div>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon">🍻</div>
+                    <div class="rule-content">
+                        <h3>カウンター</h3>
+                        <p>各自の飲んだ数を記録。一番多く飲んだ人は「今夜の王者」として称えられる！(翌日は要注意)</p>
+                    </div>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon">⚠️</div>
+                    <div class="rule-content">
+                        <h3>大事なルール</h3>
+                        <p>飲めない・飲みたくない場合はいつでもパスOK！楽しむことが最優先！お互いを尊重して楽しい夜を過ごそう！</p>
+                    </div>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon">🌟</div>
+                    <div class="rule-content">
+                        <h3>キャラ特別ルール</h3>
+                        <p>高山がルーレットで2連続当たったら「高山タイム」！ダイサブが当たったら全員でダイサブコールをしてから飲む！</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div class="footer-notice">🍺 飲み過ぎに注意！お互いを気遣いながら楽しもう 🍺</div>
+
+    <script>
+        // ========== キャラクター定義 ==========
+        const PLAYERS = [
+            { name: '高山',   emoji: '🎤', color: '#FF6B6B' },
+            { name: 'ダイサブ', emoji: '🕶️', color: '#4ECDC4' },
+            { name: 'トドロキ', emoji: '⚡', color: '#FFE66D' },
+            { name: '森ちゃん', emoji: '🌿', color: '#A8E6CF' },
+        ];
+
+        const drinkCounts = { '高山': 0, 'ダイサブ': 0, 'トドロキ': 0, '森ちゃん': 0 };
+
+        // ========== 背景バブル生成 ==========
+        (function createBubbles() {
+            const container = document.getElementById('bgBubbles');
+            const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A8E6CF', '#FFD700'];
+            for (let i = 0; i < 15; i++) {
+                const b = document.createElement('div');
+                b.className = 'bubble';
+                const size = Math.random() * 60 + 20;
+                b.style.cssText = `
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${Math.random() * 100}%;
+                    background: ${colors[Math.floor(Math.random() * colors.length)]};
+                    animation-duration: ${Math.random() * 8 + 6}s;
+                    animation-delay: ${Math.random() * 8}s;
+                `;
+                container.appendChild(b);
+            }
+        })();
+
+        // ========== タブ切り替え ==========
+        function switchTab(name) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // ========== ルーレット ==========
+        (function drawRouletteWheel() {
+            const canvas = document.getElementById('rouletteCanvas');
+            const ctx = canvas.getContext('2d');
+            const cx = 140, cy = 140, r = 135;
+            const slice = (Math.PI * 2) / PLAYERS.length;
+
+            PLAYERS.forEach((p, i) => {
+                // セクション
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, slice * i - Math.PI / 2, slice * (i + 1) - Math.PI / 2);
+                ctx.fillStyle = p.color + 'cc';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // テキスト
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(slice * i + slice / 2 - Math.PI / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillText(p.name, r - 15, 6);
+                ctx.font = '20px sans-serif';
+                ctx.fillText(p.emoji, r - 65, 8);
+                ctx.restore();
+            });
+        })();
+
+        let spinning = false;
+        let currentAngle = 0;
+
+        function spinRoulette() {
+            if (spinning) return;
+            spinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('rouletteResult').innerHTML = '';
+
+            const extraSpins = (Math.random() * 5 + 5) * 360;
+            const targetAngle = currentAngle + extraSpins + Math.random() * 360;
+            const wheel = document.getElementById('rouletteWheel');
+            wheel.style.transition = 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+            wheel.style.transform = `rotate(${targetAngle}deg)`;
+            currentAngle = targetAngle;
+
+            setTimeout(() => {
+                spinning = false;
+                document.getElementById('spinBtn').disabled = false;
+
+                const normalized = ((currentAngle % 360) + 360) % 360;
+                const sliceDeg = 360 / PLAYERS.length;
+                // ポインターは上（270度）基準
+                const pointedAngle = (360 - normalized + 270) % 360;
+                const idx = Math.floor(pointedAngle / sliceDeg) % PLAYERS.length;
+                const winner = PLAYERS[idx];
+
+                drinkCounts[winner.name]++;
+                updateCounterUI(winner.name);
+
+                document.getElementById('rouletteResult').innerHTML = `
+                    <div class="result-card" style="border-color: ${winner.color}80; color: ${winner.color}">
+                        <div style="font-size:2rem">${winner.emoji}</div>
+                        <div style="font-size:1.5rem; font-weight:900">${winner.name}</div>
+                        <div style="font-size:1rem; color:rgba(255,255,255,0.7); margin-top:4px">🍺 飲んでください！</div>
+                    </div>
+                `;
+                launchConfetti(winner.color);
+            }, 3100);
+        }
+
+        // ========== お題カード ==========
+        const CHALLENGES = [
+            { type: '高山チャレンジ', text: '高山がその場でダジャレを1つ言う！', penalty: '失敗したら高山が2杯飲む' },
+            { type: 'ダイサブチャレンジ', text: 'ダイサブが今夜一番の武勇伝を語る！', penalty: '1分以内に終わらなければ飲む' },
+            { type: 'トドロキチャレンジ', text: 'トドロキが秘密を1つ暴露する！', penalty: '断ったら2杯飲む' },
+            { type: '森ちゃんチャレンジ', text: '森ちゃんがその場で一発芸を披露！', penalty: 'みんなが笑わなければ飲む' },
+            { type: '全員チャレンジ', text: '全員で乾杯！声をそろえて「かんぱーい！」', penalty: '声がそろわなかった人が飲む' },
+            { type: 'ランダム', text: '右隣の人が1杯飲む', penalty: '' },
+            { type: 'ランダム', text: '左隣の人が1杯飲む', penalty: '' },
+            { type: 'バトル', text: '高山 vs ダイサブ！早口言葉対決！「生麦生米生卵」', penalty: '負けた人が1杯飲む' },
+            { type: 'バトル', text: 'トドロキ vs 森ちゃん！なんでもしりとり対決！', penalty: '詰まった人が1杯飲む' },
+            { type: '全員チャレンジ', text: '全員で「トドロキ〜！」とコール！', penalty: 'トドロキは1杯飲む' },
+            { type: '高山チャレンジ', text: '高山が隣の人の良いところを3つ言う！', penalty: '3つ言えなければ高山が飲む' },
+            { type: 'ランダム', text: '一番最近笑った人が1杯飲む', penalty: '' },
+            { type: 'ランダム', text: '一番テンションが高い人が1杯飲む', penalty: '' },
+            { type: '全員チャレンジ', text: '全員で「ダイサブコール」！ダ・イ・サ・ブ！', penalty: 'テンポが崩れた人が飲む' },
+            { type: 'ランダム', text: '最後に発言した人が1杯飲む', penalty: '' },
+            { type: 'バトル', text: '全員でじゃんけん！負けた人が飲む', penalty: '負け1杯・あいこ全員1杯' },
+            { type: '森ちゃんチャレンジ', text: '森ちゃんが今夜のMVPを決める！', penalty: 'MVPの人が飲む（嬉し飲み）' },
+            { type: '全員チャレンジ', text: '全員で「今夜も最高！」と叫ぶ！', penalty: '声が小さい人が飲む' },
+            { type: 'ダイサブチャレンジ', text: 'ダイサブが次のお題を即興で考える！', penalty: 'お題が面白くなければ飲む' },
+            { type: 'トドロキチャレンジ', text: 'トドロキが全員の第一印象を発表！', penalty: 'みんなが頷かなければ飲む' },
+        ];
+
+        let lastChallengeIdx = -1;
+        let cardFlipped = false;
+
+        function drawChallenge() {
+            let idx;
+            do { idx = Math.floor(Math.random() * CHALLENGES.length); } while (idx === lastChallengeIdx);
+            lastChallengeIdx = idx;
+            const c = CHALLENGES[idx];
+
+            document.getElementById('challengeText').textContent = c.text;
+            document.getElementById('challengePenalty').textContent = c.penalty ? '⚠️ ' + c.penalty : '';
+            document.querySelector('.challenge-type').textContent = c.type;
+
+            const card = document.getElementById('challengeCard');
+            card.classList.remove('flipped');
+            cardFlipped = false;
+            setTimeout(() => { card.classList.add('flipped'); cardFlipped = true; }, 100);
+        }
+
+        function flipCard() {
+            const card = document.getElementById('challengeCard');
+            if (!cardFlipped && document.getElementById('challengeText').textContent === '?') {
+                drawChallenge();
+                return;
+            }
+            card.classList.toggle('flipped');
+            cardFlipped = !cardFlipped;
+        }
+
+        // 初期カード設定
+        drawChallenge();
+
+        // ========== じゃんけん ==========
+        let jankenPlayers = new Set();
+
+        function toggleJankenPlayer(btn, name) {
+            if (jankenPlayers.has(name)) {
+                jankenPlayers.delete(name);
+                btn.classList.remove('selected');
+            } else {
+                jankenPlayers.add(name);
+                btn.classList.add('selected');
+            }
+        }
+
+        function janken(myHand) {
+            if (jankenPlayers.size < 2) {
+                document.getElementById('jankenResult').innerHTML = `
+                    <div class="janken-result-card">
+                        <div class="janken-emoji">⚠️</div>
+                        <div>2人以上を選んでください！</div>
+                    </div>`;
+                return;
+            }
+
+            document.querySelectorAll('.hand-btn').forEach(b => b.classList.remove('chosen'));
+            event.currentTarget.classList.add('chosen');
+
+            const hands = ['グー', 'チョキ', 'パー'];
+            const wins = { 'グー': 'チョキ', 'チョキ': 'パー', 'パー': 'グー' };
+            const handEmoji = { 'グー': '✊', 'チョキ': '✌️', 'パー': '🖐️' };
+
+            const players = Array.from(jankenPlayers);
+            const allHands = {};
+            allHands[players[0]] = myHand;
+            for (let i = 1; i < players.length; i++) {
+                allHands[players[i]] = hands[Math.floor(Math.random() * 3)];
+            }
+
+            const uniqueHands = [...new Set(Object.values(allHands))];
+            let resultHTML = '';
+
+            // 全員の手を表示
+            let handsDisplay = players.map(p => `${p}: ${handEmoji[allHands[p]]} ${allHands[p]}`).join(' &nbsp;|&nbsp; ');
+
+            if (uniqueHands.length === 1 || uniqueHands.length === 3) {
+                // あいこ
+                resultHTML = `
+                    <div class="janken-result-card" style="border:2px solid rgba(255,180,0,0.4)">
+                        <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:8px">${handsDisplay}</div>
+                        <div class="janken-emoji">🤝</div>
+                        <div style="font-size:1.3rem;font-weight:900;color:#FFD700">あいこ！</div>
+                        <div style="font-size:0.9rem;color:#FF6B6B;margin-top:6px">🍺 全員飲む！</div>
+                    </div>`;
+                players.forEach(p => { drinkCounts[p]++; updateCounterUI(p); });
+            } else {
+                // 勝敗あり
+                const winHand = uniqueHands.find(h => uniqueHands.some(o => wins[h] === o));
+                const losers = players.filter(p => allHands[p] !== winHand && wins[winHand] === allHands[p]);
+                const winners = players.filter(p => allHands[p] === winHand);
+
+                losers.forEach(p => { drinkCounts[p]++; updateCounterUI(p); });
+
+                resultHTML = `
+                    <div class="janken-result-card" style="border:2px solid rgba(78,205,196,0.4)">
+                        <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:8px">${handsDisplay}</div>
+                        <div class="janken-emoji">🏆</div>
+                        <div style="font-size:1.1rem;font-weight:900;color:#4ECDC4">勝者: ${winners.join(' & ')}</div>
+                        <div style="font-size:1.1rem;font-weight:900;color:#FF6B6B;margin-top:4px">敗者: ${losers.join(' & ')}</div>
+                        <div style="font-size:0.9rem;color:#FF6B6B;margin-top:6px">🍺 ${losers.join('・')}が飲む！</div>
+                    </div>`;
+                if (losers.length === 0) {
+                    resultHTML = `
+                        <div class="janken-result-card">
+                            <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:8px">${handsDisplay}</div>
+                            <div class="janken-emoji">🤝</div>
+                            <div style="font-size:1.1rem;font-weight:900;color:#FFD700">あいこ！全員飲む！</div>
+                        </div>`;
+                    players.forEach(p => { drinkCounts[p]++; updateCounterUI(p); });
+                }
+            }
+
+            document.getElementById('jankenResult').innerHTML = resultHTML;
+            document.getElementById('jankenResult').firstElementChild.style.animation = 'popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        }
+
+        // ========== カウンター ==========
+        function addDrink(name, delta) {
+            drinkCounts[name] = Math.max(0, drinkCounts[name] + delta);
+            updateCounterUI(name);
+        }
+
+        function updateCounterUI(name) {
+            const el = document.getElementById('cnt-' + name);
+            if (el) el.textContent = drinkCounts[name];
+        }
+
+        function resetAll() {
+            if (!confirm('全員のカウントをリセットしますか？')) return;
+            Object.keys(drinkCounts).forEach(k => { drinkCounts[k] = 0; updateCounterUI(k); });
+        }
+
+        // ========== コンフェッティ ==========
+        function launchConfetti(color) {
+            const overlay = document.getElementById('confettiOverlay');
+            const colors = [color, '#FFD700', '#fff', '#FF6B6B', '#4ECDC4'];
+            for (let i = 0; i < 40; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.cssText = `
+                    left: ${Math.random() * 100}%;
+                    background: ${colors[Math.floor(Math.random() * colors.length)]};
+                    width: ${Math.random() * 10 + 4}px;
+                    height: ${Math.random() * 10 + 4}px;
+                    border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+                    animation-duration: ${Math.random() * 2 + 1.5}s;
+                    animation-delay: ${Math.random() * 0.5}s;
+                `;
+                overlay.appendChild(piece);
+                setTimeout(() => piece.remove(), 3000);
+            }
+        }
+    </script>
+</body>
+</html>

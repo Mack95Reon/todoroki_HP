@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>心の光 — 瞑想シミュレーション</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a1a;
+      color: #fff;
+      font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ─── 背景の星 ─── */
+    #starfield {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── メインUI ─── */
+    .container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    /* ─── タイトル ─── */
+    .title {
+      font-size: 1.1em;
+      letter-spacing: .3em;
+      color: #c8a96e;
+      text-align: center;
+      opacity: .85;
+    }
+    .subtitle {
+      font-size: 0.7em;
+      letter-spacing: .2em;
+      color: rgba(200,169,110,.5);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* ─── 蓮の花（メインオブジェクト）─── */
+    #lotus-wrap {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 後光リング */
+    .halo {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(200,169,110,0.15);
+      animation: halo-pulse 3s ease-in-out infinite;
+    }
+    .halo:nth-child(1) { width: 200px; height: 200px; animation-delay: 0s; }
+    .halo:nth-child(2) { width: 230px; height: 230px; animation-delay: .6s; }
+    .halo:nth-child(3) { width: 260px; height: 260px; animation-delay: 1.2s; }
+    @keyframes halo-pulse {
+      0%, 100% { opacity: .15; transform: scale(1); }
+      50%       { opacity: .4;  transform: scale(1.04); }
+    }
+
+    /* 蓮SVG */
+    #lotus-svg {
+      width: 160px;
+      height: 160px;
+      transition: filter .3s;
+      cursor: pointer;
+      filter: drop-shadow(0 0 12px rgba(200,169,110,0.3));
+    }
+    #lotus-svg.glowing {
+      filter: drop-shadow(0 0 30px rgba(200,169,110,0.9))
+              drop-shadow(0 0 60px rgba(255,200,80,0.4));
+    }
+
+    /* ─── 題目テキスト ─── */
+    #daimoku {
+      font-size: 1.4em;
+      letter-spacing: .25em;
+      color: #c8a96e;
+      text-align: center;
+      height: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    #daimoku.visible { opacity: 1; }
+    #daimoku span {
+      display: inline-block;
+      animation: char-wave .6s ease infinite;
+    }
+    @keyframes char-wave {
+      0%, 100% { transform: translateY(0); opacity: 1; }
+      50%       { transform: translateY(-4px); opacity: .8; }
+    }
+
+    /* ─── プログレスバー ─── */
+    .progress-wrap {
+      width: 280px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65em;
+      letter-spacing: .12em;
+      color: rgba(200,169,110,.6);
+      margin-bottom: 8px;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,.08);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #c8a96e, #ffe082);
+      border-radius: 3px;
+      transition: width .4s ease;
+      box-shadow: 0 0 8px rgba(200,169,110,.6);
+    }
+
+    /* ─── 功徳ポイント ─── */
+    #merit-display {
+      font-size: 2em;
+      font-weight: 700;
+      color: #ffe082;
+      letter-spacing: .05em;
+      text-shadow: 0 0 20px rgba(255,224,130,.5);
+      transition: transform .15s;
+    }
+    #merit-display.pulse {
+      transform: scale(1.15);
+    }
+    .merit-label {
+      font-size: 0.65em;
+      letter-spacing: .2em;
+      color: rgba(200,169,110,.5);
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    /* ─── 段階（悟りレベル）─── */
+    #level-name {
+      font-size: 0.85em;
+      letter-spacing: .2em;
+      color: #c8a96e;
+      text-align: center;
+      padding: 6px 20px;
+      border: 1px solid rgba(200,169,110,.3);
+      border-radius: 20px;
+    }
+
+    /* ─── ボタン ─── */
+    #chant-btn {
+      width: 160px;
+      height: 52px;
+      border-radius: 26px;
+      border: 1.5px solid #c8a96e;
+      background: transparent;
+      color: #c8a96e;
+      font-family: inherit;
+      font-size: 0.85em;
+      letter-spacing: .2em;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    #chant-btn:hover {
+      background: rgba(200,169,110,.1);
+    }
+    #chant-btn:active, #chant-btn.holding {
+      background: rgba(200,169,110,.25);
+      border-color: #ffe082;
+      color: #ffe082;
+      box-shadow: 0 0 20px rgba(200,169,110,.4);
+    }
+
+    /* ─── ガイドテキスト ─── */
+    .guide {
+      font-size: 0.6em;
+      letter-spacing: .15em;
+      color: rgba(255,255,255,.25);
+      text-align: center;
+    }
+
+    /* ─── 格言 ─── */
+    #wisdom {
+      max-width: 300px;
+      font-size: 0.7em;
+      line-height: 1.8;
+      letter-spacing: .08em;
+      color: rgba(200,169,110,.55);
+      text-align: center;
+      min-height: 3em;
+      transition: opacity .5s;
+    }
+
+    /* ─── 浮遊パーティクル ─── */
+    .particle {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 50%;
+      animation: float-up linear forwards;
+      z-index: 2;
+    }
+    @keyframes float-up {
+      0%   { transform: translateY(0) scale(1); opacity: .8; }
+      100% { transform: translateY(-120px) scale(0); opacity: 0; }
+    }
+
+    /* ─── レベルアップ通知 ─── */
+    #levelup-notice {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(.8);
+      background: rgba(10,10,26,.95);
+      border: 1px solid #c8a96e;
+      border-radius: 16px;
+      padding: 28px 40px;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: all .4s;
+      z-index: 100;
+    }
+    #levelup-notice.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    #levelup-notice .lu-title {
+      font-size: 0.7em;
+      letter-spacing: .3em;
+      color: #c8a96e;
+      margin-bottom: 10px;
+    }
+    #levelup-notice .lu-name {
+      font-size: 1.4em;
+      color: #ffe082;
+      letter-spacing: .15em;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div class="container">
+
+  <div>
+    <div class="title">心 の 光</div>
+    <div class="subtitle">〜 瞑想シミュレーション 〜</div>
+  </div>
+
+  <!-- 蓮の花 -->
+  <div id="lotus-wrap">
+    <div class="halo"></div>
+    <div class="halo"></div>
+    <div class="halo"></div>
+    <svg id="lotus-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- 外側の花びら（8枚）-->
+      <g id="petals-outer" opacity="0.7">
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(0 50 50)" />
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(45 50 50)" />
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(90 50 50)" />
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(135 50 50)" />
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(180 50 50)" />
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(225 50 50)" />
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(270 50 50)" />
+        <ellipse cx="50" cy="30" rx="7" ry="18" fill="#c8a96e" transform="rotate(315 50 50)" />
+      </g>
+      <!-- 内側の花びら（8枚）-->
+      <g id="petals-inner" opacity="0.9">
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(0 50 50)" />
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(45 50 50)" />
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(90 50 50)" />
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(135 50 50)" />
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(180 50 50)" />
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(225 50 50)" />
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(270 50 50)" />
+        <ellipse cx="50" cy="34" rx="5" ry="14" fill="#ffe082" transform="rotate(315 50 50)" />
+      </g>
+      <!-- 中心 -->
+      <circle cx="50" cy="50" r="10" fill="#fff3c4" />
+      <circle cx="50" cy="50" r="6"  fill="#ffe082" />
+    </svg>
+  </div>
+
+  <!-- 題目 -->
+  <div id="daimoku">南無妙法蓮華経</div>
+
+  <!-- 悟りレベル -->
+  <div id="level-name">— 凡夫 —</div>
+
+  <!-- 功徳ポイント -->
+  <div style="text-align:center;">
+    <div id="merit-display">0</div>
+    <div class="merit-label">功 徳</div>
+  </div>
+
+  <!-- プログレス -->
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>現在の段階</span>
+      <span id="progress-text">次の段階まで：100</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- ボタン -->
+  <button id="chant-btn">お 題 目</button>
+  <div class="guide">ボタンを押し続けると功徳が積まれます</div>
+
+  <!-- 格言 -->
+  <div id="wisdom">静かに心を落ち着け、祈りを捧げましょう。</div>
+
+</div>
+
+<!-- レベルアップ通知 -->
+<div id="levelup-notice">
+  <div class="lu-title">— 段階上昇 —</div>
+  <div class="lu-name" id="lu-name-text"></div>
+</div>
+
+<script>
+  // ─── 星空 ───
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const stars = Array.from({length: 160}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.2 + 0.2,
+    a: Math.random(),
+    speed: Math.random() * 0.005 + 0.002,
+  }));
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.a += s.speed;
+      const alpha = (Math.sin(s.a) * 0.5 + 0.5) * 0.7 + 0.1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,180,120,${alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+
+  window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+
+  // ─── ゲームデータ ───
+  const LEVELS = [
+    { name: '— 凡 夫 —',       threshold: 0   },
+    { name: '— 信 者 —',       threshold: 100 },
+    { name: '— 修 行 者 —',    threshold: 300 },
+    { name: '— 菩 薩 —',       threshold: 700 },
+    { name: '— 大 菩 薩 —',    threshold: 1500 },
+    { name: '— 如 来 —',       threshold: 3000 },
+    { name: '— 久 遠 実 成 —', threshold: 6000 },
+  ];
+
+  const WISDOMS = [
+    '静かに心を落ち着け、祈りを捧げましょう。',
+    '一念三千。ひとつの心に、宇宙が宿る。',
+    '人は変われる。どんな環境にあっても。',
+    '祈りは内なる声。自分自身への問いかけ。',
+    '慈悲とは、他者の苦しみを自分のものとすること。',
+    '今ここに在ることが、修行の始まり。',
+    '蓮の花は、泥の中から清らかに咲く。',
+    '心が清ければ、世界は清くなる。',
+    '功徳は積み重ねるもの。焦らず、丁寧に。',
+  ];
+
+  let merit = 0;
+  let holding = false;
+  let holdInterval = null;
+  let currentLevel = 0;
+  let charIndex = 0;
+  let charInterval = null;
+  const DAIMOKU = '南無妙法蓮華経';
+
+  // ─── DOM refs ───
+  const meritDisplay = document.getElementById('merit-display');
+  const progressFill = document.getElementById('progress-fill');
+  const progressText = document.getElementById('progress-text');
+  const levelName    = document.getElementById('level-name');
+  const daimoku      = document.getElementById('daimoku');
+  const lotusSvg     = document.getElementById('lotus-svg');
+  const btn          = document.getElementById('chant-btn');
+  const wisdom       = document.getElementById('wisdom');
+  const luNotice     = document.getElementById('levelup-notice');
+  const luNameText   = document.getElementById('lu-name-text');
+
+  // ─── 題目アニメ ───
+  function startDaimoku() {
+    daimoku.innerHTML = '';
+    daimoku.classList.add('visible');
+    charIndex = 0;
+    charInterval = setInterval(() => {
+      if (charIndex < DAIMOKU.length) {
+        const span = document.createElement('span');
+        span.textContent = DAIMOKU[charIndex];
+        span.style.animationDelay = (charIndex * 0.08) + 's';
+        daimoku.appendChild(span);
+        charIndex++;
+      } else {
+        clearInterval(charInterval);
+      }
+    }, 80);
+  }
+  function stopDaimoku() {
+    clearInterval(charInterval);
+    daimoku.classList.remove('visible');
+    daimoku.innerHTML = '';
+  }
+
+  // ─── パーティクル ───
+  function spawnParticle() {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 6 + 3;
+    const x = Math.random() * window.innerWidth;
+    const y = window.innerHeight * 0.4 + Math.random() * 100;
+    const colors = ['rgba(200,169,110,.8)', 'rgba(255,224,130,.7)', 'rgba(255,255,255,.5)'];
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${x}px; top:${y}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${Math.random()*1.5+0.8}s;
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 2500);
+  }
+
+  // ─── UI更新 ───
+  function updateUI() {
+    meritDisplay.textContent = merit.toLocaleString();
+    meritDisplay.classList.add('pulse');
+    setTimeout(() => meritDisplay.classList.remove('pulse'), 150);
+
+    const nextLevel = LEVELS[currentLevel + 1];
+    const thisLevel = LEVELS[currentLevel];
+    if (nextLevel) {
+      const range  = nextLevel.threshold - thisLevel.threshold;
+      const filled = merit - thisLevel.threshold;
+      const pct    = Math.min(100, (filled / range) * 100);
+      progressFill.style.width = pct + '%';
+      progressText.textContent = '次の段階まで：' + (nextLevel.threshold - merit);
+    } else {
+      progressFill.style.width = '100%';
+      progressText.textContent = '最高の境地に達しました';
+    }
+  }
+
+  // ─── レベルチェック ───
+  function checkLevel() {
+    let newLevel = 0;
+    for (let i = 0; i < LEVELS.length; i++) {
+      if (merit >= LEVELS[i].threshold) newLevel = i;
+    }
+    if (newLevel > currentLevel) {
+      currentLevel = newLevel;
+      levelName.textContent = LEVELS[currentLevel].name;
+      showLevelUp(LEVELS[currentLevel].name);
+    }
+  }
+
+  function showLevelUp(name) {
+    luNameText.textContent = name;
+    luNotice.classList.add('show');
+    setTimeout(() => luNotice.classList.remove('show'), 2200);
+    wisdom.style.opacity = '0';
+    setTimeout(() => {
+      wisdom.textContent = WISDOMS[Math.floor(Math.random() * WISDOMS.length)];
+      wisdom.style.opacity = '1';
+    }, 500);
+  }
+
+  // ─── 功徳を積む ───
+  function gainMerit() {
+    merit += 1;
+    updateUI();
+    checkLevel();
+    if (Math.random() < 0.4) spawnParticle();
+  }
+
+  // ─── 保持開始 ───
+  function startHold() {
+    if (holding) return;
+    holding = true;
+    btn.classList.add('holding');
+    lotusSvg.classList.add('glowing');
+    startDaimoku();
+    gainMerit();
+    holdInterval = setInterval(() => {
+      gainMerit();
+      if (Math.random() < 0.15) {
+        wisdom.style.opacity = '0';
+        setTimeout(() => {
+          wisdom.textContent = WISDOMS[Math.floor(Math.random() * WISDOMS.length)];
+          wisdom.style.opacity = '1';
+        }, 300);
+      }
+    }, 120);
+  }
+
+  // ─── 保持終了 ───
+  function stopHold() {
+    if (!holding) return;
+    holding = false;
+    btn.classList.remove('holding');
+    lotusSvg.classList.remove('glowing');
+    stopDaimoku();
+    clearInterval(holdInterval);
+  }
+
+  // ─── イベント ───
+  btn.addEventListener('mousedown',   startHold);
+  btn.addEventListener('touchstart',  (e) => { e.preventDefault(); startHold(); }, { passive: false });
+  document.addEventListener('mouseup',  stopHold);
+  document.addEventListener('touchend', stopHold);
+
+  // 蓮をクリックしても可
+  lotusSvg.addEventListener('mousedown', startHold);
+  lotusSvg.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(); }, { passive: false });
+
+  // ─── 蓮の回転アニメ ───
+  let angle = 0;
+  function rotateLotus() {
+    if (holding) angle += 0.3;
+    else         angle += 0.05;
+    document.getElementById('petals-outer').setAttribute('transform', `rotate(${angle} 50 50)`);
+    document.getElementById('petals-inner').setAttribute('transform', `rotate(${-angle * 0.7} 50 50)`);
+    requestAnimationFrame(rotateLotus);
+  }
+  rotateLotus();
+</script>
+</body>
+</html>

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ならびゲーム⚡</title>
+    <style>
+        :root {
+            --rion:   #FF6EC7;
+            --zaki:   #00E5FF;
+            --rui:    #FFEB3B;
+            --leon:   #76FF03;
+            --bg:     #080810;
+            --card:   rgba(255,255,255,0.06);
+            --border: rgba(255,255,255,0.1);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            height: 100%;
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+            overscroll-behavior: none;
+        }
+
+        /* ========= ヘッダー ========= */
+        .header {
+            padding: 20px 16px 6px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: clamp(1.4rem, 6vw, 2.2rem);
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            background: linear-gradient(90deg, var(--rion), var(--zaki), var(--rui), var(--leon));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 12px rgba(255,110,199,0.5));
+        }
+        .header p {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.4);
+            margin-top: 4px;
+            letter-spacing: 0.15em;
+        }
+
+        /* ========= タブ ========= */
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 6px;
+            padding: 12px 12px 0;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab {
+            flex-shrink: 0;
+            padding: 9px 16px;
+            border-radius: 50px;
+            border: 1.5px solid var(--border);
+            background: var(--card);
+            color: rgba(255,255,255,0.55);
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s;
+            white-space: nowrap;
+        }
+        .tab.active {
+            background: #fff;
+            border-color: #fff;
+            color: #000;
+            box-shadow: 0 0 16px rgba(255,255,255,0.3);
+        }
+
+        /* ========= コンテンツ ========= */
+        .content {
+            padding: 14px 12px 100px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .panel { display: none; animation: fadeUp 0.3s ease; }
+        .panel.active { display: block; }
+
+        @keyframes fadeUp {
+            from { opacity:0; transform:translateY(12px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* ========= キャラクター行 ========= */
+        .chars {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .char-chip {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 10px 4px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        .char-chip .emo  { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+        .char-chip.rion  { border-color: var(--rion); color: var(--rion); }
+        .char-chip.zaki  { border-color: var(--zaki); color: var(--zaki); }
+        .char-chip.rui   { border-color: var(--rui);  color: var(--rui); }
+        .char-chip.leon  { border-color: var(--leon); color: var(--leon); }
+
+        /* ========= ルーレット ========= */
+        .roulette-wrap {
+            position: relative;
+            width: min(280px, 80vw);
+            height: min(280px, 80vw);
+            margin: 10px auto 20px;
+        }
+        .roulette-wrap canvas {
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.15);
+            box-shadow: 0 0 40px rgba(255,110,199,0.25);
+        }
+        .roulette-ptr {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.8rem;
+            filter: drop-shadow(0 2px 4px #000);
+        }
+        .roulette-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            width: 44px; height: 44px;
+            background: #080810;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            z-index: 5;
+        }
+
+        /* ========= ビッグボタン ========= */
+        .big-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            border-radius: 18px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.05em;
+        }
+        .big-btn:active { transform: scale(0.97); }
+        .big-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, var(--rion), #a855f7);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(255,110,199,0.35);
+        }
+        .btn-cyan {
+            background: linear-gradient(135deg, var(--zaki), #0ea5e9);
+            color: #000;
+            box-shadow: 0 4px 20px rgba(0,229,255,0.3);
+        }
+        .btn-lime {
+            background: linear-gradient(135deg, var(--leon), #22c55e);
+            color: #000;
+            box-shadow: 0 4px 20px rgba(118,255,3,0.3);
+        }
+        .btn-yellow {
+            background: linear-gradient(135deg, var(--rui), #f59e0b);
+            color: #000;
+            box-shadow: 0 4px 20px rgba(255,235,59,0.3);
+        }
+
+        /* ========= 結果表示 ========= */
+        .result-box {
+            margin: 14px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .result-inner {
+            background: var(--card);
+            border: 1.5px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 18px 20px;
+            text-align: center;
+            width: 100%;
+            animation: popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.7); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+
+        /* ========= フリップカード ========= */
+        .card-3d-wrap {
+            perspective: 900px;
+            height: 160px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .card-3d {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+        }
+        .card-3d.flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 16px;
+        }
+        .card-front {
+            background: linear-gradient(135deg, #1a0a2e, #0a1a2e);
+            border: 1.5px solid rgba(255,255,255,0.1);
+        }
+        .card-back {
+            background: linear-gradient(135deg, #0a2e1a, #1a2e0a);
+            border: 1.5px solid rgba(118,255,3,0.3);
+            transform: rotateY(180deg);
+        }
+        .card-tag {
+            font-size: 0.65rem;
+            letter-spacing: 0.2em;
+            color: rgba(118,255,3,0.7);
+            text-transform: uppercase;
+        }
+        .card-text {
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.45;
+            text-align: center;
+        }
+        .card-penalty {
+            font-size: 0.78rem;
+            color: rgba(255,110,199,0.8);
+        }
+
+        /* ========= 投票 ========= */
+        .vote-question {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .vote-question .q-emoji { font-size: 2rem; margin-bottom: 6px; }
+        .vote-question .q-text { font-size: 1rem; font-weight: 700; line-height: 1.4; }
+
+        .vote-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .vote-btn {
+            padding: 16px 8px;
+            border-radius: 18px;
+            border: 2px solid var(--border);
+            background: var(--card);
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .vote-btn .v-emo { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+        .vote-btn.rion { border-color: var(--rion); color: var(--rion); }
+        .vote-btn.zaki { border-color: var(--zaki); color: var(--zaki); }
+        .vote-btn.rui  { border-color: var(--rui);  color: var(--rui); }
+        .vote-btn.leon { border-color: var(--leon); color: var(--leon); }
+        .vote-btn.voted { opacity: 1; transform: scale(1.05); box-shadow: 0 0 20px currentColor; }
+        .vote-btn:active { transform: scale(0.96); }
+
+        .vote-result-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .vote-result-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.5s ease;
+        }
+
+        /* ========= 反射神経ゲーム ========= */
+        .reflex-arena {
+            position: relative;
+            height: 320px;
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .reflex-target {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 0 20px currentColor;
+            animation: pulse-target 0.5s ease-in-out infinite alternate;
+            z-index: 5;
+        }
+        @keyframes pulse-target {
+            from { transform: scale(1); }
+            to   { transform: scale(1.12); }
+        }
+        .reflex-target:active { transform: scale(0.85); }
+
+        .reflex-countdown {
+            font-size: 4rem;
+            font-weight: 900;
+            color: rgba(255,255,255,0.7);
+        }
+        .reflex-msg {
+            text-align: center;
+            padding: 20px;
+        }
+        .reflex-msg .rm-emoji { font-size: 2.5rem; }
+        .reflex-msg .rm-text  { font-size: 1rem; font-weight: 700; margin-top: 6px; }
+
+        .reflex-score-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .reflex-score-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            font-weight: 700;
+        }
+        .reflex-score-item .rank { font-size: 1.3rem; }
+        .reflex-score-item .name { flex: 1; margin: 0 10px; font-size: 0.95rem; }
+        .reflex-score-item .score { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
+
+        /* ========= トーク ========= */
+        .talk-card {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            padding: 28px 20px;
+            text-align: center;
+            margin-bottom: 14px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .talk-card:active { transform: scale(0.98); }
+        .talk-card .t-emoji { font-size: 2.5rem; }
+        .talk-card .t-text  { font-size: 1.05rem; font-weight: 700; line-height: 1.5; }
+        .talk-card .t-hint  { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+
+        /* ========= セクションラベル ========= */
+        .sec-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            text-align: center;
+            margin: 12px 0 10px;
+        }
+
+        /* ========= コンフェッティ ========= */
+        .confetti-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            overflow: hidden;
+        }
+        .cf {
+            position: absolute;
+            top: -12px;
+            border-radius: 2px;
+            animation: cf-fall linear forwards;
+        }
+        @keyframes cf-fall {
+            to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* ========= ボトムパディング ========= */
+        .bottom-safe { height: env(safe-area-inset-bottom, 20px); }
+    </style>
+</head>
+<body>
+
+<div class="confetti-layer" id="cfLayer"></div>
+
+<div class="header">
+    <h1>⚡ ならびゲーム ⚡</h1>
+    <p>リオン × ザキヤマ × ルイ × レオン</p>
+</div>
+
+<!-- タブ -->
+<div class="tabs">
+    <button class="tab active" onclick="switchTab('roulette',this)">🎡 ルーレット</button>
+    <button class="tab" onclick="switchTab('challenge',this)">🃏 チャレンジ</button>
+    <button class="tab" onclick="switchTab('vote',this)">🗳️ 誰が一番？</button>
+    <button class="tab" onclick="switchTab('reflex',this)">⚡ 反射神経</button>
+    <button class="tab" onclick="switchTab('talk',this)">💬 トーク</button>
+</div>
+
+<div class="content">
+
+    <!-- ======== ルーレット ======== -->
+    <div class="panel active" id="panel-roulette">
+        <p class="sec-label">🎡 ROULETTE</p>
+
+        <div class="chars">
+            <div class="char-chip rion"><span class="emo">🌸</span>リオン</div>
+            <div class="char-chip zaki"><span class="emo">😎</span>ザキヤマ</div>
+            <div class="char-chip rui" ><span class="emo">🌙</span>ルイ</div>
+            <div class="char-chip leon"><span class="emo">🦁</span>レオン</div>
+        </div>
+
+        <div class="roulette-wrap">
+            <div class="roulette-ptr">▼</div>
+            <canvas id="rouletteCanvas" width="280" height="280"></canvas>
+            <div class="roulette-center">🎯</div>
+        </div>
+
+        <button class="big-btn btn-gradient" id="spinBtn" onclick="spinRoulette()">🎰 まわす！</button>
+
+        <div class="result-box" id="rouletteResult"></div>
+    </div>
+
+    <!-- ======== チャレンジ ======== -->
+    <div class="panel" id="panel-challenge">
+        <p class="sec-label">🃏 CHALLENGE CARD</p>
+
+        <div class="card-3d-wrap">
+            <div class="card-3d" id="challengeCard" onclick="flipChallenge()">
+                <div class="card-face card-front">
+                    <span style="font-size:2.5rem">🃏</span>
+                    <span style="font-size:0.8rem;color:rgba(255,255,255,0.4)">タップしてめくる</span>
+                </div>
+                <div class="card-face card-back">
+                    <span class="card-tag" id="cTag">CHALLENGE</span>
+                    <span class="card-text" id="cText">?</span>
+                    <span class="card-penalty" id="cPenalty"></span>
+                </div>
+            </div>
+        </div>
+
+        <button class="big-btn btn-lime" onclick="nextChallenge()" style="margin-top:10px">🎲 次のカード</button>
+    </div>
+
+    <!-- ======== 投票 ======== -->
+    <div class="panel" id="panel-vote">
+        <p class="sec-label">🗳️ WHO IS MOST...?</p>
+
+        <div class="vote-question" id="voteQ">
+            <div class="q-emoji">🤔</div>
+            <div class="q-text">ボタンを押して質問を出す！</div>
+        </div>
+
+        <div class="vote-grid">
+            <button class="vote-btn rion" onclick="castVote('リオン')">
+                <span class="v-emo">🌸</span>リオン
+                <div class="vote-result-bar"><div class="vote-result-fill" id="vbar-リオン" style="width:0%;background:var(--rion)"></div></div>
+                <div style="font-size:0.7rem;margin-top:3px;color:rgba(255,255,255,0.4)" id="vscore-リオン">0票</div>
+            </button>
+            <button class="vote-btn zaki" onclick="castVote('ザキヤマ')">
+                <span class="v-emo">😎</span>ザキヤマ
+                <div class="vote-result-bar"><div class="vote-result-fill" id="vbar-ザキヤマ" style="width:0%;background:var(--zaki)"></div></div>
+                <div style="font-size:0.7rem;margin-top:3px;color:rgba(255,255,255,0.4)" id="vscore-ザキヤマ">0票</div>
+            </button>
+            <button class="vote-btn rui" onclick="castVote('ルイ')">
+                <span class="v-emo">🌙</span>ルイ
+                <div class="vote-result-bar"><div class="vote-result-fill" id="vbar-ルイ" style="width:0%;background:var(--rui)"></div></div>
+                <div style="font-size:0.7rem;margin-top:3px;color:rgba(255,255,255,0.4)" id="vscore-ルイ">0票</div>
+            </button>
+            <button class="vote-btn leon" onclick="castVote('レオン')">
+                <span class="v-emo">🦁</span>レオン
+                <div class="vote-result-bar"><div class="vote-result-fill" id="vbar-レオン" style="width:0%;background:var(--leon)"></div></div>
+                <div style="font-size:0.7rem;margin-top:3px;color:rgba(255,255,255,0.4)" id="vscore-レオン">0票</div>
+            </button>
+        </div>
+
+        <button class="big-btn btn-cyan" onclick="nextVoteQ()">🔀 次の質問</button>
+        <button onclick="resetVotes()" style="display:block;margin:10px auto 0;background:none;border:none;color:rgba(255,255,255,0.3);font-size:0.8rem;cursor:pointer">リセット</button>
+    </div>
+
+    <!-- ======== 反射神経 ======== -->
+    <div class="panel" id="panel-reflex">
+        <p class="sec-label">⚡ REFLEX GAME</p>
+
+        <div class="reflex-arena" id="reflexArena">
+            <div class="reflex-countdown" id="reflexCountdown" style="display:none"></div>
+            <div class="reflex-msg" id="reflexMsg">
+                <div class="rm-emoji">⚡</div>
+                <div class="rm-text">ボタンを押してスタート！<br><span style="font-size:0.75rem;color:rgba(255,255,255,0.4)">出てきたターゲットを素早くタップ！</span></div>
+            </div>
+        </div>
+
+        <div class="reflex-score-list" id="reflexScores"></div>
+
+        <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="big-btn btn-yellow" style="flex:1" onclick="startReflex()">⚡ スタート</button>
+            <button class="big-btn" style="flex:0.4;background:rgba(255,255,255,0.08);color:#fff" onclick="resetReflex()">🔄</button>
+        </div>
+    </div>
+
+    <!-- ======== トーク ======== -->
+    <div class="panel" id="panel-talk">
+        <p class="sec-label">💬 TALK THEME</p>
+
+        <div class="talk-card" onclick="nextTalk()">
+            <div class="t-emoji" id="talkEmoji">💭</div>
+            <div class="t-text"  id="talkText">タップして話題を出す！</div>
+            <div class="t-hint">タップで次の話題</div>
+        </div>
+
+        <button class="big-btn btn-gradient" onclick="nextTalk()">🎲 別の話題</button>
+
+        <p class="sec-label" style="margin-top:20px">🔥 この中で誰が一番〜？(即答)</p>
+        <div class="talk-card" onclick="nextBlitz()" style="min-height:100px">
+            <div class="t-emoji" id="blitzEmoji">❓</div>
+            <div class="t-text"  id="blitzText">タップして質問</div>
+        </div>
+    </div>
+
+</div>
+<div class="bottom-safe"></div>
+
+<script>
+// ============ キャラ定義 ============
+const PLAYERS = [
+    { name:'リオン',   emoji:'🌸', color:'#FF6EC7' },
+    { name:'ザキヤマ', emoji:'😎', color:'#00E5FF' },
+    { name:'ルイ',    emoji:'🌙', color:'#FFEB3B' },
+    { name:'レオン',  emoji:'🦁', color:'#76FF03' },
+];
+
+// ============ タブ切り替え ============
+function switchTab(name, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    btn.classList.add('active');
+}
+
+// ============ ルーレット ============
+(function drawWheel() {
+    const canvas = document.getElementById('rouletteCanvas');
+    const size = Math.min(280, window.innerWidth * 0.8);
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const cx = size/2, cy = size/2, r = size/2 - 2;
+    const slice = Math.PI * 2 / PLAYERS.length;
+    PLAYERS.forEach((p, i) => {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, slice*i - Math.PI/2, slice*(i+1) - Math.PI/2);
+        ctx.fillStyle = p.color + 'bb';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(slice*i + slice/2 - Math.PI/2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#000';
+        ctx.font = `bold ${size*0.055}px sans-serif`;
+        ctx.fillText(p.name, r - size*0.05, size*0.022);
+        ctx.font = `${size*0.07}px sans-serif`;
+        ctx.fillText(p.emoji, r - size*0.2, size*0.026);
+        ctx.restore();
+    });
+})();
+
+let spinning = false, curAngle = 0;
+
+function spinRoulette() {
+    if (spinning) return;
+    spinning = true;
+    document.getElementById('spinBtn').disabled = true;
+    document.getElementById('rouletteResult').innerHTML = '';
+    const extra = (Math.random()*5+5)*360 + Math.random()*360;
+    const target = curAngle + extra;
+    const canvas = document.getElementById('rouletteCanvas');
+    canvas.style.transition = 'transform 3s cubic-bezier(0.17,0.67,0.12,0.99)';
+    canvas.style.transform = `rotate(${target}deg)`;
+    curAngle = target;
+    setTimeout(() => {
+        spinning = false;
+        document.getElementById('spinBtn').disabled = false;
+        const norm = ((curAngle % 360) + 360) % 360;
+        const sliceDeg = 360 / PLAYERS.length;
+        const pointed = (360 - norm + 270) % 360;
+        const idx = Math.floor(pointed / sliceDeg) % PLAYERS.length;
+        const w = PLAYERS[idx];
+        document.getElementById('rouletteResult').innerHTML = `
+            <div class="result-inner" style="border-color:${w.color}55">
+                <div style="font-size:2rem">${w.emoji}</div>
+                <div style="font-size:1.4rem;font-weight:900;color:${w.color}">${w.name}</div>
+                <div style="font-size:0.85rem;color:rgba(255,255,255,0.5);margin-top:4px">が選ばれました！</div>
+            </div>`;
+        confetti(w.color);
+    }, 3100);
+}
+
+// ============ チャレンジ ============
+const CHALLENGES = [
+    { tag:'リオンから', text:'リオンが今一番行きたい場所を教える！', penalty:'答えられなければ罰ゲーム' },
+    { tag:'ザキヤマから', text:'ザキヤマが今まで一番恥ずかしかった話をする！', penalty:'盛り上がらなければ罰ゲーム' },
+    { tag:'ルイから', text:'ルイが隣の人のものまねをする！', penalty:'バレなければルイが罰ゲーム' },
+    { tag:'レオンから', text:'レオンが30秒間ノンストップで話し続ける！', penalty:'止まったら罰ゲーム' },
+    { tag:'全員チャレンジ', text:'全員で今いる列の中で一番気になる人を指さす（ノーリアクションで）', penalty:'笑ったら罰ゲーム' },
+    { tag:'全員チャレンジ', text:'全員で同時に好きな食べ物を言う！一致したらラッキー！', penalty:'全員ばらばらなら全員罰ゲーム' },
+    { tag:'ランダム', text:'スマホのカメラロールで一番古い写真を見せ合う！', penalty:'見せたくない人が罰ゲーム' },
+    { tag:'ランダム', text:'今すぐ一番好きな歌のサビを3秒歌う！', penalty:'音程が外れたら罰ゲーム' },
+    { tag:'バトル', text:'リオン vs ザキヤマ！早口言葉対決「生麦生米生卵」3回！', penalty:'噛んだほうが罰ゲーム' },
+    { tag:'バトル', text:'ルイ vs レオン！しりとり対決！3秒以内に答える！', penalty:'詰まった人が罰ゲーム' },
+    { tag:'リオンから', text:'リオンが全員の好きなタイプを予想して発表！', penalty:'全部外れたらリオンが罰ゲーム' },
+    { tag:'ザキヤマから', text:'ザキヤマが今すぐ変顔を作って写真を撮る！', penalty:'カッコつけたらザキヤマが罰ゲーム' },
+    { tag:'ルイから', text:'ルイが隣の人を10秒本気で褒め続ける！', penalty:'恥ずかしがったらルイが罰ゲーム' },
+    { tag:'レオンから', text:'レオンが今日一番の名言を言う！', penalty:'スベったら罰ゲーム' },
+    { tag:'全員チャレンジ', text:'全員でスマホのホーム画面を見せ合う！', penalty:'見せたくない人が罰ゲーム' },
+    { tag:'ランダム', text:'一番最後に送ったLINEの文面を読み上げる！', penalty:'読めない内容があった人が罰ゲーム' },
+    { tag:'全員チャレンジ', text:'全員で今日のコーデを採点し合う！', penalty:'最低点の人が罰ゲーム' },
+    { tag:'バトル', text:'全員でじゃんけん！最後まで勝ち残った人が次のお題を決める！', penalty:'' },
+    { tag:'ランダム', text:'一番最近サボったことを告白する！', penalty:'告白できなかった人が罰ゲーム' },
+    { tag:'全員チャレンジ', text:'全員で一斉に「レオン最高！」と叫ぶ！（小声で）', penalty:'一番声が大きかった人が罰ゲーム' },
+    { tag:'ランダム', text:'「この列に何人いるか？」を全員で予想！一番近い人が勝ち！', penalty:'一番遠い人が罰ゲーム' },
+    { tag:'全員チャレンジ', text:'全員で今から1分間スマホを見ない！', penalty:'見てしまったら罰ゲーム' },
+];
+
+let lastCIdx = -1, cFlipped = false;
+
+function nextChallenge() {
+    let idx;
+    do { idx = Math.floor(Math.random() * CHALLENGES.length); } while (idx === lastCIdx);
+    lastCIdx = idx;
+    const c = CHALLENGES[idx];
+    document.getElementById('cTag').textContent = c.tag;
+    document.getElementById('cText').textContent = c.text;
+    document.getElementById('cPenalty').textContent = c.penalty ? '⚠️ ' + c.penalty : '';
+    const card = document.getElementById('challengeCard');
+    card.classList.remove('flipped');
+    cFlipped = false;
+    setTimeout(() => { card.classList.add('flipped'); cFlipped = true; }, 80);
+}
+
+function flipChallenge() {
+    const card = document.getElementById('challengeCard');
+    if (!cFlipped && document.getElementById('cText').textContent === '?') { nextChallenge(); return; }
+    card.classList.toggle('flipped');
+    cFlipped = !cFlipped;
+}
+
+nextChallenge();
+
+// ============ 投票 ============
+const VOTE_QS = [
+    { emoji:'😂', text:'この中で一番面白いのは？' },
+    { emoji:'😱', text:'この中で一番ビビりなのは？' },
+    { emoji:'🍜', text:'この中で一番食べることが好きなのは？' },
+    { emoji:'💤', text:'この中で一番寝るのが好きなのは？' },
+    { emoji:'🏆', text:'この中で一番負けず嫌いなのは？' },
+    { emoji:'💸', text:'この中で一番お金にシビアなのは？' },
+    { emoji:'📱', text:'この中で一番スマホ依存なのは？' },
+    { emoji:'🎤', text:'この中で一番カラオケが好きなのは？' },
+    { emoji:'🌶️', text:'この中で一番テンションが高くなるのは？' },
+    { emoji:'😴', text:'この中で一番マイペースなのは？' },
+    { emoji:'🦁', text:'この中で一番頼りになるのは？' },
+    { emoji:'🎭', text:'この中で一番キャラが濃いのは？' },
+    { emoji:'💬', text:'この中で一番おしゃべりなのは？' },
+    { emoji:'🔥', text:'この中で一番熱くなりやすいのは？' },
+    { emoji:'🌸', text:'この中で一番可愛いのは？' },
+    { emoji:'😎', text:'この中で一番クールなのは？' },
+    { emoji:'🍺', text:'この中で一番お酒が強そうなのは？' },
+    { emoji:'🎮', text:'この中で一番ゲームが強そうなのは？' },
+    { emoji:'🕐', text:'この中で一番時間にルーズなのは？' },
+    { emoji:'🎯', text:'この中で一番集中力があるのは？' },
+];
+
+let voteScores = {'リオン':0,'ザキヤマ':0,'ルイ':0,'レオン':0};
+let lastVQIdx = -1;
+
+function nextVoteQ() {
+    let idx;
+    do { idx = Math.floor(Math.random() * VOTE_QS.length); } while (idx === lastVQIdx);
+    lastVQIdx = idx;
+    const q = VOTE_QS[idx];
+    document.getElementById('voteQ').innerHTML = `<div class="q-emoji">${q.emoji}</div><div class="q-text">${q.text}</div>`;
+    resetVotes();
+}
+
+function castVote(name) {
+    voteScores[name]++;
+    updateVoteBars();
+    const btn = event.currentTarget;
+    btn.classList.add('voted');
+    setTimeout(() => btn.classList.remove('voted'), 600);
+}
+
+function updateVoteBars() {
+    const total = Object.values(voteScores).reduce((a,b)=>a+b,0) || 1;
+    Object.keys(voteScores).forEach(name => {
+        const pct = (voteScores[name] / total * 100).toFixed(0);
+        document.getElementById('vbar-' + name).style.width = pct + '%';
+        document.getElementById('vscore-' + name).textContent = voteScores[name] + '票';
+    });
+}
+
+function resetVotes() {
+    Object.keys(voteScores).forEach(k => voteScores[k] = 0);
+    updateVoteBars();
+}
+
+nextVoteQ();
+
+// ============ 反射神経ゲーム ============
+let reflexActive = false, reflexRound = 0, reflexMax = 8;
+let reflexScores = {'リオン':0,'ザキヤマ':0,'ルイ':0,'レオン':0};
+let reflexTimer, reflexTarget, currentTargetPlayer;
+
+function startReflex() {
+    if (reflexActive) return;
+    reflexActive = true;
+    reflexScores = {'リオン':0,'ザキヤマ':0,'ルイ':0,'レオン':0};
+    reflexRound = 0;
+    document.getElementById('reflexScores').innerHTML = '';
+    countdownReflex(3);
+}
+
+function countdownReflex(n) {
+    const arena = document.getElementById('reflexArena');
+    const cd = document.getElementById('reflexCountdown');
+    const msg = document.getElementById('reflexMsg');
+    msg.style.display = 'none';
+    cd.style.display = 'block';
+    cd.textContent = n;
+    if (n > 0) {
+        setTimeout(() => countdownReflex(n-1), 700);
+    } else {
+        cd.style.display = 'none';
+        nextReflexRound();
+    }
+}
+
+function nextReflexRound() {
+    if (reflexRound >= reflexMax) { endReflex(); return; }
+    reflexRound++;
+
+    const arena = document.getElementById('reflexArena');
+    const aRect = arena.getBoundingClientRect();
+    const w = aRect.width - 80, h = aRect.height - 80;
+    const x = Math.random()*w + 10;
+    const y = Math.random()*h + 10;
+
+    const p = PLAYERS[Math.floor(Math.random()*PLAYERS.length)];
+    currentTargetPlayer = p.name;
+
+    if (reflexTarget) reflexTarget.remove();
+    reflexTarget = document.createElement('div');
+    reflexTarget.className = 'reflex-target';
+    reflexTarget.style.cssText = `left:${x}px;top:${y}px;background:${p.color}33;color:${p.color};border:2px solid ${p.color}`;
+    reflexTarget.textContent = p.emoji;
+    reflexTarget.onclick = hitTarget;
+    arena.appendChild(reflexTarget);
+
+    reflexTimer = setTimeout(() => {
+        if (reflexTarget) reflexTarget.remove();
+        reflexTarget = null;
+        nextReflexRound();
+    }, 2000);
+}
+
+function hitTarget() {
+    clearTimeout(reflexTimer);
+    reflexScores[currentTargetPlayer] = (reflexScores[currentTargetPlayer]||0) + 1;
+    const t = reflexTarget;
+    t.style.animation = 'none';
+    t.style.transform = 'scale(1.5)';
+    t.style.opacity = '0';
+    t.style.transition = 'all 0.2s';
+    reflexTarget = null;
+    confetti(PLAYERS.find(p=>p.name===currentTargetPlayer).color);
+    setTimeout(() => { t.remove(); nextReflexRound(); }, 250);
+}
+
+function endReflex() {
+    reflexActive = false;
+    if (reflexTarget) { reflexTarget.remove(); reflexTarget = null; }
+    const msg = document.getElementById('reflexMsg');
+    msg.style.display = 'block';
+    msg.innerHTML = '<div class="rm-emoji">🏆</div><div class="rm-text">結果発表！</div>';
+
+    const sorted = Object.entries(reflexScores).sort((a,b)=>b[1]-a[1]);
+    const medals = ['🥇','🥈','🥉','4️⃣'];
+    const list = document.getElementById('reflexScores');
+    list.innerHTML = '';
+    sorted.forEach(([name, score], i) => {
+        const p = PLAYERS.find(pp=>pp.name===name);
+        const item = document.createElement('div');
+        item.className = 'reflex-score-item';
+        item.style.borderColor = p.color + '55';
+        item.innerHTML = `
+            <span class="rank">${medals[i]}</span>
+            <span class="name" style="color:${p.color}">${p.emoji} ${name}</span>
+            <span class="score">${score}ヒット</span>`;
+        list.appendChild(item);
+    });
+    confetti(PLAYERS.find(p=>p.name===sorted[0][0]).color);
+}
+
+function resetReflex() {
+    reflexActive = false;
+    clearTimeout(reflexTimer);
+    if (reflexTarget) { reflexTarget.remove(); reflexTarget = null; }
+    reflexScores = {'リオン':0,'ザキヤマ':0,'ルイ':0,'レオン':0};
+    document.getElementById('reflexScores').innerHTML = '';
+    const msg = document.getElementById('reflexMsg');
+    msg.style.display = 'block';
+    msg.innerHTML = '<div class="rm-emoji">⚡</div><div class="rm-text">ボタンを押してスタート！<br><span style="font-size:0.75rem;color:rgba(255,255,255,0.4)">出てきたターゲットを素早くタップ！</span></div>';
+    document.getElementById('reflexCountdown').style.display = 'none';
+}
+
+// ============ トーク ============
+const TALK_THEMES = [
+    { emoji:'🏝️', text:'無人島に1つだけ持っていくなら何？理由も言って！' },
+    { emoji:'⏰', text:'もし時間を戻せるなら何歳に戻る？' },
+    { emoji:'💰', text:'1億円もらったら最初に何をする？' },
+    { emoji:'🦸', text:'超能力を1つもらえるなら何を選ぶ？' },
+    { emoji:'🌍', text:'明日世界が終わるとしたら今日何をする？' },
+    { emoji:'🐾', text:'生まれ変わるなら何になりたい？' },
+    { emoji:'🎬', text:'自分の人生が映画になるなら主演は誰に頼む？' },
+    { emoji:'🍽️', text:'最後の晩餐は何を食べる？' },
+    { emoji:'🚀', text:'宇宙旅行と深海探索、どっちに行く？' },
+    { emoji:'😱', text:'今までで一番怖かった体験は？' },
+    { emoji:'🤝', text:'この中で誰かと双子になれるなら誰と？' },
+    { emoji:'📺', text:'今見てるドラマ・アニメ・映画は？おすすめして！' },
+    { emoji:'🎵', text:'最近ヘビロテしてる曲は？' },
+    { emoji:'🌙', text:'昨日の夜何してた？正直に！' },
+    { emoji:'💭', text:'今一番悩んでることは？（言える範囲で）' },
+    { emoji:'🎉', text:'この中で一番最近テンションが上がったことは？' },
+    { emoji:'🦄', text:'もし動物と話せたら何を聞きたい？' },
+    { emoji:'🏃', text:'今やりたいことTOP3は？' },
+    { emoji:'🔮', text:'5年後どうなってると思う？それぞれ予想して！' },
+    { emoji:'😅', text:'恥ずかしくて誰にも言えなかったこと（言える範囲で）' },
+];
+
+const BLITZ_QS = [
+    '今一番連絡したい人は？',
+    '今すぐ食べたいものは？',
+    '今日の自分のテンションを点数で！',
+    'この4人の中で一番信頼できるのは？',
+    '今一番行きたい場所は？',
+    '今いちばん欲しいものは？',
+    'ひとことで自分を表すと？',
+    '今一番楽しいことは何？',
+    '今一番会いたい人は？',
+    '最近の1番の後悔は？',
+];
+
+let lastTalkIdx = -1, lastBlitzIdx = -1;
+
+function nextTalk() {
+    let idx;
+    do { idx = Math.floor(Math.random() * TALK_THEMES.length); } while (idx === lastTalkIdx);
+    lastTalkIdx = idx;
+    const t = TALK_THEMES[idx];
+    document.getElementById('talkEmoji').textContent = t.emoji;
+    document.getElementById('talkText').textContent = t.text;
+}
+
+function nextBlitz() {
+    let idx;
+    do { idx = Math.floor(Math.random() * BLITZ_QS.length); } while (idx === lastBlitzIdx);
+    lastBlitzIdx = idx;
+    document.getElementById('blitzEmoji').textContent = '❓';
+    document.getElementById('blitzText').textContent = BLITZ_QS[idx];
+}
+
+nextTalk();
+nextBlitz();
+
+// ============ コンフェッティ ============
+function confetti(color) {
+    const layer = document.getElementById('cfLayer');
+    const colors = [color, '#fff', '#FFD700', '#FF6EC7', '#00E5FF'];
+    for (let i = 0; i < 30; i++) {
+        const el = document.createElement('div');
+        el.className = 'cf';
+        const size = Math.random()*8+4;
+        el.style.cssText = `
+            left:${Math.random()*100}%;
+            width:${size}px;height:${size}px;
+            border-radius:${Math.random()>0.5?'50%':'2px'};
+            background:${colors[Math.floor(Math.random()*colors.length)]};
+            animation-duration:${Math.random()*1.5+1}s;
+            animation-delay:${Math.random()*0.4}s;
+        `;
+        layer.appendChild(el);
+        setTimeout(() => el.remove(), 2500);
+    }
+}
+</script>
+</body>
+</html>
